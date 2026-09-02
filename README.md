@@ -1,2 +1,2 @@
-# personalized-synthetic-cmri-img-dl
+# Personalized Synthetic Cardiac MRI Image Generation using Deep Generative Models
 Develop deep generative models to produce realistic, diverse, and anatomically consistent synthetic cardiac MRI images. The project will explore GAN-, VAE-, and diffusion-based approaches, with evaluation focused on image fidelity, anatomical consistency, diversity, privacy and the usefulness of synthetic data for downstream cardiac image analysis.
