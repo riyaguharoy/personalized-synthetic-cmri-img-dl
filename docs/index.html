@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clinical-Profile-Conditioned Synthetic Cardiac MRI Generation Using Deep Generative Models</title>
+<meta name="description" content="Master's thesis project on generating synthetic cardiac MR images and segmentation masks guided by a patient's clinical profile.">
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1d2330; --muted: #5b6475; --line: #dfe3ea;
+    --card: #f6f8fb; --accent: #1f4e9c; --accent-soft: #e6eefb; --warn: #fff4d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f1420; --fg: #e8ecf4; --muted: #a2adc2; --line: #2a3345;
+            --card: #171e2d; --accent: #8db4ff; --accent-soft: #1b2744; --warn: #3a3118; }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  a { color: var(--accent); }
+  header.hero { padding: 56px 20px 40px; border-bottom: 1px solid var(--line); background: var(--card); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+  .badge { display: inline-block; font-size: 13px; padding: 3px 10px; border-radius: 999px;
+           background: var(--accent-soft); color: var(--accent); margin-bottom: 14px; }
+  h1 { font-size: clamp(1.7rem, 4vw, 2.5rem); line-height: 1.2; margin: 0 0 12px; }
+  .sub { color: var(--muted); margin: 0; max-width: 720px; }
+  nav { position: sticky; top: 0; background: var(--bg); border-bottom: 1px solid var(--line); z-index: 5; }
+  nav .wrap { display: flex; gap: 18px; overflow-x: auto; padding-top: 10px; padding-bottom: 10px; }
+  nav a { text-decoration: none; white-space: nowrap; font-size: 15px; color: var(--muted); }
+  nav a:hover { color: var(--accent); }
+  section { padding: 44px 0 8px; }
+  h2 { font-size: 1.5rem; margin: 0 0 14px; }
+  h3 { font-size: 1.1rem; margin: 22px 0 8px; }
+  p { margin: 0 0 14px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  .card h3 { margin-top: 0; }
+  .tag { font-weight: 700; color: var(--accent); }
+  figure { margin: 22px 0; }
+  figure img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+  figcaption { color: var(--muted); font-size: 14px; margin-top: 8px; }
+  .figrow { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start; }
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--card); font-weight: 600; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  .note { background: var(--warn); border-radius: 10px; padding: 12px 16px; font-size: 15px; }
+  ul.clean { padding-left: 20px; margin: 0 0 14px; }
+  ul.clean li { margin-bottom: 6px; }
+  .status-done { color: #1a7f4b; font-weight: 600; }
+  .status-now  { color: #b26a00; font-weight: 600; }
+  .status-next { color: var(--muted); font-weight: 600; }
+  code { background: var(--card); border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; font-size: 14px; }
+  footer { margin-top: 56px; padding: 26px 0 40px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="badge">Work in progress &middot; project proposal stage, autumn 2026</span>
+    <h1>Clinical-Profile-Conditioned Synthetic Cardiac MRI Generation Using Deep Generative Models</h1>
+    <p class="sub">A master's thesis project at the University of South-Eastern Norway, in collaboration with Simula Research Laboratory. The aim is to generate synthetic cardiac MR images and their segmentation masks that are guided by a patient's clinical profile, and to test whether that guidance is real, useful and safe.</p>
+  </div>
+</header>
+
+<nav>
+  <div class="wrap">
+    <a href="#idea">The idea</a>
+    <a href="#questions">Objective and questions</a>
+    <a href="#method">How it works</a>
+    <a href="#literature">Literature</a>
+    <a href="#datasets">Datasets</a>
+    <a href="#plan">Plan and status</a>
+    <a href="#repo">Repository</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section id="idea">
+  <h2>The idea in plain words</h2>
+  <p>Deep learning models for cardiac MRI need a lot of labelled data, and that data is hard to get. Scans differ between scanners and hospitals, expert labelling is slow, and privacy rules limit sharing. Some patient groups and conditions also appear only a handful of times.</p>
+  <p>Generative models can create extra synthetic scans. Most existing work controls the <em>anatomy</em> of the generated heart, for example with a segmentation mask. This project asks what happens when the generation is controlled by <em>information about the patient</em>, such as diagnosis group, body measurements or other clinical details, so the synthetic data can be shaped towards the groups a dataset is missing.</p>
+  <div class="note"><strong>Scope.</strong> This is a methods and data project. It does not involve clinicians, patient outcomes or clinical deployment, and it makes no claim about clinical impact.</div>
+</section>
+
+<section id="questions">
+  <h2>Objective and research questions</h2>
+  <p><strong>Main objective.</strong> Investigate how clinical-profile information can give fine-grained control over the generation of synthetic cardiac MR images together with their segmentation masks.</p>
+  <div class="grid">
+    <div class="card"><h3><span class="tag">O1 / RQ1</span> Build it</h3><p>Develop a baseline generative model without clinical-profile conditioning, and a conditioned version built on top of it. How can the profile be put into the model?</p></div>
+    <div class="card"><h3><span class="tag">O2 / RQ2</span> Check it works</h3><p>Do the generated images and masks keep plausible anatomy, and do they actually reflect the profile they were conditioned on?</p></div>
+    <div class="card"><h3><span class="tag">O3 / RQ3</span> Compare it</h3><p>How does the conditioned model compare with the baseline on fidelity, downstream utility and privacy?</p></div>
+  </div>
+</section>
+
+<section id="method">
+  <h2>How it works</h2>
+  <p>The work follows Design Science Research. A baseline pipeline is built first, then the clinical-profile-conditioned approach is added on top of it, so any difference can be traced to the conditioning itself.</p>
+  <div class="figrow">
+    <figure>
+      <img src="assets/pipeline_steps.png" alt="Four-step pipeline: dataset investigation, baseline development, conditioned generation, evaluation, each with a short description">
+      <figcaption>The four steps of the pipeline, with what each one involves.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/dsr_activities.png" alt="Six Design Science Research activities mapped to the thesis">
+      <figcaption>The six Design Science Research activities, mapped onto the thesis.</figcaption>
+    </figure>
+  </div>
+  <h3>Two ways to generate image and mask</h3>
+  <figure>
+    <img src="assets/generation_strategies.png" alt="Strategy 1: one model produces image and mask together. Strategy 2: a mask is generated first and then used to guide image generation">
+    <figcaption>Strategy 1 generates the image and mask together in one step. Strategy 2 generates the mask first and uses it to guide the image. The final choice depends on the dataset investigation and early experiments.</figcaption>
+  </figure>
+  <h3>How the results will be judged</h3>
+  <ul class="clean">
+    <li><strong>Did the conditioning work?</strong> Measure the generated masks and images and compare with the values requested.</li>
+    <li><strong>Fidelity.</strong> How close the synthetic images are to real ones (for example FID, KID, SSIM, LPIPS).</li>
+    <li><strong>Utility.</strong> Train segmentation models on real, synthetic and combined data and test them on the same real data, including across datasets.</li>
+    <li><strong>Privacy.</strong> Nearest-neighbour distance and membership-inference tests.</li>
+  </ul>
+  <figure>
+    <img src="assets/research_workflow.png" alt="Research workflow linking motivation, research gap, the three research questions and the final analysis">
+    <figcaption>Overall research workflow: from motivation and gap, through the three research questions, to the final analysis and comparison.</figcaption>
+  </figure>
+</section>
+
+<section id="literature">
+  <h2>What the literature says so far</h2>
+  <p>A focused review of cardiac MRI generators that use patient-level information found a small, varied set of papers. Each conditions on something different, and few check the result in the same way.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Paper</th><th>Conditions on</th><th>Data</th><th>Checked the conditioning?</th><th>Privacy tested?</th></tr></thead>
+      <tbody>
+        <tr><td>Campello et al. 2022</td><td>Age, BMI</td><td>UK Biobank</td><td>Yes (age and BMI regressor)</td><td>No</td></tr>
+        <tr><td>Skorupko et al. 2025</td><td>Sex, age, BMI, health condition (text) plus masks</td><td>UK Biobank</td><td>Partly</td><td>Argued, not tested</td></tr>
+        <tr><td>Li et al. 2025 (CPGG)</td><td>Cardiac phenotypes</td><td>UK Biobank and a private set</td><td>Not stated</td><td>Not stated</td></tr>
+        <tr><td>Cao et al. 2026</td><td>Diagnosis, chamber volumes, ejection fraction</td><td>ACDC, Data Science Bowl; tested on M&amp;Ms and M&amp;Ms-2</td><td>Yes (correlation, r 0.66 to 0.94)</td><td>No</td></tr>
+        <tr><td>Fang et al. 2026 (ECGFlowCMR)</td><td>12-lead ECG</td><td>UK Biobank and a private set</td><td>Not stated</td><td>Not stated</td></tr>
+        <tr><td>Amirrajab et al. 2022</td><td>Segmentation masks</td><td>M&amp;Ms</td><td>Not stated</td><td>Argued, not tested</td></tr>
+        <tr><td>Amirrajab et al. 2023</td><td>Pathology-altered masks</td><td>ACDC, M&amp;Ms</td><td>Not stated</td><td>Not stated</td></tr>
+        <tr><td>Diller et al. 2020</td><td>None (one disease cohort)</td><td>303 patients with tetralogy of Fallot</td><td>Not applicable</td><td>Argued, not tested</td></tr>
+        <tr><td>Edirisooriya et al. 2026</td><td>Segmentation masks</td><td>ACDC, M&amp;Ms</td><td>Not applicable</td><td>Yes</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:14px">Across these nine papers, all measure fidelity and utility, but only one measures privacy, and only two clearly check that the conditioning worked. This is a pattern in the papers reviewed, not a count of the whole field. Details, sources and the reasoning are in <a href="https://github.com/riyaguharoy/personalized-synthetic-cmri-img-dl/blob/main/literature/literature_review.md">the literature review</a>.</p>
+</section>
+
+<section id="datasets">
+  <h2>Candidate datasets</h2>
+  <p>A conditioned model can only use the patient information a dataset actually carries, and that varies a lot.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Dataset</th><th>Images</th><th>Size</th><th>Clinical information</th><th>Fit</th></tr></thead>
+      <tbody>
+        <tr><td><strong>ACDC</strong></td><td>Cine, short axis</td><td>150 patients, 5 groups of 30</td><td>Diagnosis group, height, weight. No age or sex.</td><td>Main dataset</td></tr>
+        <tr><td><strong>M&amp;Ms</strong></td><td>Cine, 4 vendors, 6 hospitals</td><td>375 datasets</td><td>Pathology, vendor, centre. Age and sex still to confirm.</td><td>External test set</td></tr>
+        <tr><td><strong>M&amp;Ms-2</strong></td><td>Cine, short and long axis</td><td>360 studies</td><td>To confirm</td><td>Extra external test</td></tr>
+        <tr><td><strong>EMIDEC</strong></td><td>Delayed-enhancement MRI</td><td>150 exams</td><td>Sex, age, smoking, hypertension, diabetes, troponin, ejection fraction and more</td><td>Separate experiment</td></tr>
+        <tr><td><strong>MyoPS 2020</strong></td><td>bSSFP, LGE, T2</td><td>45 cases</td><td>None found</td><td>Unlikely</td></tr>
+        <tr><td><strong>UK Biobank</strong></td><td>Cine, several views</td><td>Tens of thousands</td><td>Age, sex, BMI, hospital records</td><td>Extension, needs approval</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:14px">The full notes, including what is confirmed and what still needs checking on the downloaded data, are in <a href="https://github.com/riyaguharoy/personalized-synthetic-cmri-img-dl/blob/main/datasets/dataset_summary.md">the dataset summary</a>. The repository includes a script that audits the real data once it is downloaded.</p>
+</section>
+
+<section id="plan">
+  <h2>Plan and status</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Stage</th><th>Period</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Project proposal and literature review draft</td><td>Aug to Sep 2026</td><td class="status-done">Done</td></tr>
+        <tr><td>Dataset investigation and project design</td><td>Sep to early Nov 2026</td><td class="status-now">In progress</td></tr>
+        <tr><td>Baseline development</td><td>Oct to early Nov 2026</td><td class="status-next">Next</td></tr>
+        <tr><td>Clinical-profile conditioning and first evaluation</td><td>Nov to Dec 2026</td><td class="status-next">Planned</td></tr>
+        <tr><td>Full evaluation: fidelity, utility, privacy</td><td>Jan to Mar 2027</td><td class="status-next">Planned</td></tr>
+        <tr><td>Comparative analysis and thesis writing</td><td>Apr to May 2027</td><td class="status-next">Planned</td></tr>
+        <tr><td>Thesis submission and presentation</td><td>May to June 2027</td><td class="status-next">Planned</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="repo">
+  <h2>What is in the repository</h2>
+  <ul class="clean">
+    <li><code>literature/</code> the literature review, a summary spreadsheet and a CSV version of it</li>
+    <li><code>datasets/</code> the dataset summary as a document and as a CSV</li>
+    <li><code>scripts/audit_datasets.py</code> builds a patient-level table, derived measures and distributions from downloaded data</li>
+    <li><code>docs/</code> this page</li>
+  </ul>
+  <p>No patient data are stored in the repository. The datasets must be downloaded from their official sources and used under their own licences.</p>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Parts of this page and of the supporting documents were drafted with AI assistance. Facts were checked against the cited sources, and items marked "to confirm" are still open.</p>
+  </div>
+</footer>
+
+</body>
+</html>

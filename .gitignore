@@ -1,0 +1,17 @@
+# Data are never committed. Download from the official sources and keep them local.
+data/
+datasets/raw/
+*.nii
+*.nii.gz
+*.dcm
+*.h5
+*.mat
+
+# Outputs and environments
+outputs/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+.DS_Store
