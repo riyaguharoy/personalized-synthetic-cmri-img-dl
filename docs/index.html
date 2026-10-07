@@ -60,9 +60,9 @@
 
 <header class="hero">
   <div class="wrap">
-    <span class="badge">Work in progress &middot; project proposal stage, autumn 2026</span>
+    <span class="badge">Work in progress &middot; dataset investigation stage, autumn 2026</span>
     <h1>Clinical-Profile-Conditioned Synthetic Cardiac MRI Generation Using Deep Generative Models</h1>
-    <p class="sub">A master's thesis project at the University of South-Eastern Norway, in collaboration with Simula Research Laboratory. The aim is to generate synthetic cardiac MR images and their segmentation masks that are guided by a patient's clinical profile, and to test whether that guidance is real, useful and safe. This thesis, extends the CBMS pipeline so synthetic cardiac MRI can be generated for a given clinical profile, such as age, sex or diagnosis, and evaluated with the same fidelity, utility and privacy framework. Currently finalizing the proposal and research questions, and keen to understand where this fits best within SEARCH.</p>
+    <p class="sub">A master's thesis project at the University of South-Eastern Norway, in collaboration with Simula Research Laboratory. The aim is to generate synthetic cardiac MR images and their segmentation masks that are guided by a patient's clinical profile, and to test whether that guidance is real, useful and safe. The thesis extends the CBMS pipeline so that synthetic cardiac MRI can be generated for a given clinical profile, such as diagnosis group, height and weight, and evaluated with the same fidelity, utility and privacy framework. The proposal and research questions have been approved by the supervisors, and the project is now in the dataset investigation stage.</p>
   </div>
 </header>
 
@@ -74,6 +74,7 @@
     <a href="#literature">Literature</a>
     <a href="#datasets">Datasets</a>
     <a href="#acdc-audit">ACDC audit</a>
+    <a href="#mnms-audit">M&amp;Ms audit</a>
     <a href="#plan">Plan and status</a>
     <a href="#repo">Repository</a>
   </div>
@@ -159,7 +160,7 @@
       <thead><tr><th>Dataset</th><th>Images</th><th>Size</th><th>Clinical information</th><th>Fit</th></tr></thead>
       <tbody>
         <tr><td><strong>ACDC</strong></td><td>Cine, short axis</td><td>150 patients, 5 groups of 30 (100 labelled training patients audited)</td><td>Diagnosis group, height, weight. No age or sex (confirmed on the downloaded data).</td><td>Main dataset</td></tr>
-        <tr><td><strong>M&amp;Ms</strong></td><td>Cine, 4 vendors, 6 hospitals</td><td>375 datasets</td><td>Pathology, vendor, centre. Age and sex still to confirm.</td><td>External test set</td></tr>
+        <tr><td><strong>M&amp;Ms</strong></td><td>Cine, 4 vendors, 6 hospitals</td><td>375 datasets</td><td>Pathology, vendor, centre, age, sex, weight. Height missing for 61% of cases.</td><td>External test set</td></tr>
         <tr><td><strong>M&amp;Ms-2</strong></td><td>Cine, short and long axis</td><td>360 studies</td><td>To confirm</td><td>Extra external test</td></tr>
         <tr><td><strong>EMIDEC</strong></td><td>Delayed-enhancement MRI</td><td>150 exams</td><td>Sex, age, smoking, hypertension, diabetes, troponin, ejection fraction and more</td><td>Separate experiment</td></tr>
         <tr><td><strong>MyoPS 2020</strong></td><td>bSSFP, LGE, T2</td><td>45 cases</td><td>None found</td><td>Unlikely</td></tr>
@@ -167,7 +168,7 @@
       </tbody>
     </table>
   </div>
-  <p style="margin-top:14px">The full notes, including what is confirmed and what still needs checking on the downloaded data, are in <a href="https://github.com/riyaguharoy/personalized-synthetic-cmri-img-dl/blob/main/datasets/dataset_summary.md">the dataset summary</a>. The repository includes a script that audits the real data once it is downloaded. ACDC has been audited (next section); M&amp;Ms is next.</p>
+  <p style="margin-top:14px">The full notes, including what is confirmed and what still needs checking on the downloaded data, are in <a href="https://github.com/riyaguharoy/personalized-synthetic-cmri-img-dl/blob/main/datasets/dataset_summary.md">the dataset summary</a>. The repository includes a script that audits the real data once it is downloaded. ACDC and M&amp;Ms have both been audited (next two sections).</p>
 </section>
 
 <section id="acdc-audit">
@@ -203,6 +204,58 @@
     </table>
   </div>
   <p style="margin-top:14px">The pattern matches the diagnoses: a large, weakly contracting left ventricle in DCM, a thick myocardium with high EF in HCM, and a large right ventricle with low RV EF in the RV group. This also confirms that the masks and the script work as intended.</p>
+</section>
+
+<section id="mnms-audit">
+  <h2>M&amp;Ms audit: what the metadata shows</h2>
+  <p>The audit script was run on the metadata file of the public M&amp;Ms release (345 cases). This covers the clinical information only. The images and masks have not been checked yet.</p>
+  <div class="grid">
+    <div class="card">
+      <h3>What was confirmed</h3>
+      <ul class="clean">
+        <li>Age and sex are present for every case (211 male, 134 female, ages 15 to 90). Weight is missing for 2 cases.</li>
+        <li>Height is missing for 210 of 345 cases (61%). It is absent for every Philips and GE case, so it is usable only for Siemens and Canon.</li>
+        <li>Each vendor comes from specific centres: Siemens centre 1, Philips centres 2 and 3, GE centre 4, Canon centre 5.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>What it means for the thesis</h3>
+      <ul class="clean">
+        <li>ACDC and M&amp;Ms share diagnosis (DCM, HCM, normal) and weight. Age and sex exist only in M&amp;Ms, so a model trained on ACDC cannot use them, and the ACDC to M&amp;Ms test rests on diagnosis.</li>
+        <li>ACDC's MINF and RV groups have no direct match in M&amp;Ms. The closest labels are IHD (5 cases) and ARV (15 cases), which are not the same conditions.</li>
+        <li>Diagnosis and scanner are tangled together: for example, 19 of 24 HHD cases are GE and no DCM case is GE. Results should be reported per vendor.</li>
+        <li>For 26 GE cases the end-systolic frame is recorded as 0, which looks like a missing value and needs checking on the images.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="tablewrap" style="margin-top:14px">
+    <table>
+      <thead><tr><th>Diagnosis</th><th>Cases</th><th>Mean age</th><th>Female / male</th></tr></thead>
+      <tbody>
+        <tr><td><strong>DCM</strong></td><td>97</td><td>44.8</td><td>33 / 64</td></tr>
+        <tr><td><strong>NOR</strong> (normal)</td><td>89</td><td>48.5</td><td>45 / 44</td></tr>
+        <tr><td><strong>HCM</strong></td><td>85</td><td>60.8</td><td>28 / 57</td></tr>
+        <tr><td><strong>Other</strong></td><td>25</td><td>51.0</td><td>9 / 16</td></tr>
+        <tr><td><strong>HHD</strong></td><td>24</td><td>65.2</td><td>10 / 14</td></tr>
+        <tr><td><strong>ARV</strong></td><td>15</td><td>64.9</td><td>8 / 7</td></tr>
+        <tr><td><strong>IHD</strong></td><td>5</td><td>67.8</td><td>0 / 5</td></tr>
+        <tr><td><strong>AHS</strong></td><td>3</td><td>38.0</td><td>0 / 3</td></tr>
+        <tr><td><strong>LVNC</strong></td><td>2</td><td>39.5</td><td>1 / 1</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="tablewrap" style="margin-top:14px">
+    <table>
+      <thead><tr><th>Vendor</th><th>Centre</th><th>Cases</th><th>Height available</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Philips</strong></td><td>2, 3</td><td>125</td><td>0</td></tr>
+        <tr><td><strong>Siemens</strong></td><td>1</td><td>95</td><td>85</td></tr>
+        <tr><td><strong>GE</strong></td><td>4</td><td>75</td><td>0</td></tr>
+        <tr><td><strong>Canon</strong></td><td>5</td><td>50</td><td>50</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:14px">Mean age differs a lot between diagnoses (about 45 for DCM, about 61 for HCM), so age and diagnosis cannot be separated cleanly in this dataset.</p>
 </section>
 
 <section id="plan">
