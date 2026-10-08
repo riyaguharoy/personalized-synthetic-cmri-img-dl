@@ -70,7 +70,7 @@
   tbody tr:nth-child(even) td { background:color-mix(in srgb,var(--band) 55%,transparent); }
   tbody tr:hover td { background:var(--accent-soft); }
   tr:last-child td { border-bottom:none; }
-  .note { background: #f4f5ff; border:1px solid var(--warn-line); border-left:5px solid #bfe0f5;
+  .note { background:var(--warn); border:1px solid var(--warn-line); border-left:5px solid #d99a1b;
           border-radius:10px; padding:13px 18px; font-size:15px; }
   ul.clean { padding-left:20px; margin:0 0 14px; }
   ul.clean li { margin-bottom:7px; }
@@ -89,7 +89,7 @@
 
 <header class="hero">
   <div class="wrap">
-    <span class="badge">Work in progress &middot; Dataset Investigation Stage, Autumn 2026</span>
+    <span class="badge">Work in progress &middot; dataset investigation stage, autumn 2026</span>
     <h1>Clinical-Profile-Conditioned Synthetic Cardiac MRI Generation Using Deep Generative Models</h1>
     <p class="sub">A master's thesis project at the University of South-Eastern Norway, in collaboration with Simula Research Laboratory. The aim is to generate synthetic cardiac MR images and their segmentation masks that are guided by a patient's clinical profile, and to test whether that guidance is real, useful and safe. The thesis extends the CBMS pipeline so that synthetic cardiac MRI can be generated for a given clinical profile, such as diagnosis group, height and weight, and evaluated with the same fidelity, utility and privacy framework. The proposal and research questions have been approved by the supervisors, and the project is now in the dataset investigation stage.</p>
     <div class="stats">
@@ -110,6 +110,7 @@
     <a href="#datasets">Datasets</a>
     <a href="#acdc-audit">ACDC audit</a>
     <a href="#mnms-audit">M&amp;Ms audit</a>
+    <a href="#preprocessing">Preprocessed data</a>
     <a href="#plan">Plan and status</a>
     <a href="#repo">Repository</a>
   </div>
@@ -192,14 +193,14 @@
   <p>A conditioned model can only use the patient information a dataset actually carries, and that varies a lot.</p>
   <div class="tablewrap">
     <table>
-      <thead><tr><th>Dataset</th><th>Images</th><th>Size</th><th>Clinical information</th><th>Fit</th></tr></thead>
+      <thead><tr><th>Dataset</th><th>Images</th><th>Size</th><th>Groups</th><th>Clinical information</th><th>Fit and decision</th></tr></thead>
       <tbody>
-        <tr><td><strong>ACDC</strong></td><td>Cine, short axis</td><td>150 patients, 5 groups of 30 (100 labelled training patients audited)</td><td>Diagnosis group, height, weight. No age or sex (confirmed on the downloaded data).</td><td>Main dataset</td></tr>
-        <tr><td><strong>M&amp;Ms</strong></td><td>Cine, 4 vendors, 6 hospitals</td><td>375 datasets</td><td>Pathology, vendor, centre, age, sex, weight. Height missing for 61% of cases.</td><td>External test set</td></tr>
-        <tr><td><strong>M&amp;Ms-2</strong></td><td>Cine, short and long axis</td><td>360 studies</td><td>To confirm</td><td>Extra external test</td></tr>
-        <tr><td><strong>EMIDEC</strong></td><td>Delayed-enhancement MRI</td><td>150 exams</td><td>Sex, age, smoking, hypertension, diabetes, troponin, ejection fraction and more</td><td>Separate experiment</td></tr>
-        <tr><td><strong>MyoPS 2020</strong></td><td>bSSFP, LGE, T2</td><td>45 cases</td><td>None found</td><td>Unlikely</td></tr>
-        <tr><td><strong>UK Biobank</strong></td><td>Cine, several views</td><td>Tens of thousands</td><td>Age, sex, BMI, hospital records</td><td>Extension, needs approval</td></tr>
+        <tr><td><strong>ACDC</strong><br><small>2017</small></td><td>Cine SSFP short axis, 1.5T and 3T, one centre (Dijon)</td><td>150 patients; 100 labelled training patients audited and preprocessed (1,902 slices)</td><td>NOR, MINF, DCM, HCM, RV (20 each in the 100 labelled)</td><td>Diagnosis group, height, weight, ED and ES frame. No age or sex (confirmed on the downloaded data).</td><td><strong>Main dataset.</strong> Balanced, with a strong diagnosis signal. Height and weight differ little between groups.</td></tr>
+        <tr><td><strong>M&amp;Ms</strong><br><small>2020</small></td><td>Cine short axis, 4 vendors, 6 hospitals, 3 countries</td><td>375 reported; 345 cases with masks in the downloaded release, all preprocessed (7,908 slices)</td><td>NOR 89, DCM 97, HCM 85, HHD 24, ARV 15, IHD 5, AHS 3, LVNC 2, Other 25</td><td>Pathology, vendor, centre, age, sex, weight. Height missing for 61% of cases.</td><td><strong>External test set.</strong> Shares only DCM, HCM, normal and weight with ACDC. DCM is milder than in ACDC, so results are also reported by measured EF.</td></tr>
+        <tr><td><strong>M&amp;Ms-2</strong><br><small>2021</small></td><td>Cine, short and long axis, 3 vendors</td><td>360 studies</td><td>Right-ventricle focus</td><td>To confirm</td><td>Extra external test. <strong>Not used</strong> (time and compute).</td></tr>
+        <tr><td><strong>EMIDEC</strong><br><small>2020</small></td><td>Delayed-enhancement MRI</td><td>150 exams</td><td>Normal vs myocardial infarction</td><td>Sex, age, smoking, hypertension, diabetes, troponin, ejection fraction and more</td><td>Richest profile, but binary diagnosis and a different image type. <strong>Not used</strong> in the current scope.</td></tr>
+        <tr><td><strong>MyoPS 2020</strong></td><td>bSSFP, LGE, T2</td><td>45 cases</td><td>Patients with myocardial scar</td><td>None found</td><td>Small and homogeneous. <strong>Dropped.</strong></td></tr>
+        <tr><td><strong>UK Biobank</strong><br><small>ongoing</small></td><td>Cine, several views</td><td>Tens of thousands</td><td>Population cohort</td><td>Age, sex, BMI, hospital records</td><td>Best for age, sex and BMI conditioning, but needs approval. <strong>Future extension.</strong></td></tr>
       </tbody>
     </table>
   </div>
@@ -243,7 +244,7 @@
 
 <section id="mnms-audit">
   <h2>M&amp;Ms audit: what the metadata shows</h2>
-  <p>The audit script was run on the metadata file of the public M&amp;Ms release (345 cases). This covers the clinical information only. The images and masks have not been checked yet.</p>
+  <p>The audit script was run on the metadata file of the public M&amp;Ms release (345 cases). This section covers the clinical information. The images and masks were processed afterwards (next section).</p>
   <div class="grid">
     <div class="card">
       <h3>What was confirmed</h3>
@@ -291,6 +292,41 @@
     </table>
   </div>
   <p style="margin-top:14px">Mean age differs a lot between diagnoses (about 45 for DCM, about 61 for HCM), so age and diagnosis cannot be separated cleanly in this dataset.</p>
+</section>
+
+<section id="preprocessing">
+  <h2>Preprocessed data: what the model will see</h2>
+  <p>Both datasets were converted into the same format so that a model trained on ACDC can be tested on M&amp;Ms: 2D short-axis slices at the end-diastolic (ED) and end-systolic (ES) frames, resampled to 1.5 mm pixels, cropped to 128&times;128 around the heart, with intensity normalised per volume. Splits are made by patient, never by slice.</p>
+  <div class="grid">
+    <div class="card">
+      <h3>ACDC (training and testing)</h3>
+      <ul class="clean">
+        <li>100 patients, 1,902 slices</li>
+        <li>Per diagnosis group: 14 patients for training, 2 for validation, 4 for testing</li>
+        <li>No mask touches the image border after cropping</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>M&amp;Ms (external test)</h3>
+      <ul class="clean">
+        <li>345 cases, 7,908 slices, all kept for external testing</li>
+        <li>Labels converted to the ACDC convention and checked on the images and on chamber volumes</li>
+        <li>Slice order made consistent in all 345 cases (checked: base first in 100%, against 99% in ACDC)</li>
+      </ul>
+    </div>
+  </div>
+  <div class="figrow">
+    <figure>
+      <img src="assets/acdc_qc.png" alt="Example ACDC slices, one patient per diagnosis group, with the segmentation overlaid at end-diastole and end-systole" onerror="this.closest('figure').style.display='none'">
+      <figcaption>ACDC: one example patient per diagnosis group, ED (top) and ES (bottom).</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/mnms_qc.png" alt="Example M&amp;Ms slices from four patients with the segmentation overlaid at end-diastole and end-systole">
+      <figcaption>M&amp;Ms: example cases, ED (top) and ES (bottom).</figcaption>
+    </figure>
+  </div>
+  <p style="font-size:14px;color:var(--muted)">Colours: blue right ventricle, olive myocardium, red left ventricle. A few example slices are shown for illustration, with attribution to ACDC (Bernard et al., 2018) and M&amp;Ms (Campello et al., 2021). The datasets themselves are not redistributed.</p>
+  <div class="note"><strong>A caution for the external test.</strong> The same diagnosis label means different severity in the two datasets. The mean LV ejection fraction of the DCM group is 18% in ACDC but 48% in M&amp;Ms, with a wide spread (5% to 85%). Results on M&amp;Ms will therefore also be reported by measured ejection fraction, not only by diagnosis.</div>
 </section>
 
 <section id="plan">
