@@ -89,9 +89,9 @@
 
 <header class="hero">
   <div class="wrap">
-    <span class="badge">Work in progress &middot; dataset investigation stage, autumn 2026</span>
+    <span class="badge">Work in progress &middot; baseline done, conditioned model started, autumn 2026</span>
     <h1>Clinical-Profile-Conditioned Synthetic Cardiac MRI Generation Using Deep Generative Models</h1>
-    <p class="sub">A master's thesis project at the University of South-Eastern Norway, in collaboration with Simula Research Laboratory. The aim is to generate synthetic cardiac MR images and their segmentation masks that are guided by a patient's clinical profile, and to test whether that guidance is real, useful and safe. The thesis extends the CBMS pipeline so that synthetic cardiac MRI can be generated for a given clinical profile, such as diagnosis group, height and weight, and evaluated with the same fidelity, utility and privacy framework. The proposal and research questions have been approved by the supervisors, and the project is now in the dataset investigation stage.</p>
+    <p class="sub">A master's thesis project at the University of South-Eastern Norway, in collaboration with Simula Research Laboratory. The aim is to generate synthetic cardiac MR images and their segmentation masks that are guided by a patient's clinical profile, and to test whether that guidance is real, useful and safe. The thesis extends the CBMS pipeline so that synthetic cardiac MRI can be generated for a given clinical profile, such as diagnosis group, height and weight, and evaluated with the same fidelity, utility and privacy framework. The proposal and research questions have been approved by the supervisors. The datasets are prepared, a mask-to-image baseline has been built and evaluated, and the first stage of the conditioned model (clinical profile to mask) is working.</p>
     <div class="stats">
       <div class="stat"><b>100</b><span>ACDC patients audited</span></div>
       <div class="stat"><b>345</b><span>M&amp;Ms cases audited</span></div>
@@ -111,6 +111,7 @@
     <a href="#acdc-audit">ACDC audit</a>
     <a href="#mnms-audit">M&amp;Ms audit</a>
     <a href="#preprocessing">Preprocessed data</a>
+    <a href="#results">First results</a>
     <a href="#plan">Plan and status</a>
     <a href="#repo">Repository</a>
   </div>
@@ -321,6 +322,46 @@
   <div class="note"><strong>A caution for the external test.</strong> The same diagnosis label means different severity in the two datasets. The mean LV ejection fraction of the DCM group is 18% in ACDC but 48% in M&amp;Ms, with a wide spread (5% to 85%). Results on M&amp;Ms will therefore also be reported by measured ejection fraction, not only by diagnosis.</div>
 </section>
 
+<section id="results">
+  <h2>First results</h2>
+  <p>Early results from single runs, so no averages over seeds yet. The conditioned model has two stages: a clinical profile becomes a segmentation mask (stage 1), and the mask becomes an image with the baseline (stage 2, not yet built).</p>
+
+  <h3>Baseline: mask to image</h3>
+  <p>A SPADE-style conditional GAN, written from scratch and trained on the ACDC training patients (150 epochs, about 75 minutes on a free GPU). Slices with an empty mask are left out. Image quality is measured with FID and KID, against a floor: the score of real images against other real images.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Test set</th><th>FID</th><th>KID</th></tr></thead>
+      <tbody>
+        <tr><td>Generated vs real, ACDC test patients (355 slices)</td><td>167.1</td><td>0.120 &plusmn; 0.008</td></tr>
+        <tr><td>Floor: real vs real, ACDC</td><td>83.8</td><td>0.0032 &plusmn; 0.0013</td></tr>
+        <tr><td>Generated vs real, M&amp;Ms (external, 1,500 slices)</td><td>132.4</td><td>0.126 &plusmn; 0.008</td></tr>
+        <tr><td>Floor: real vs real, M&amp;Ms</td><td>29.1</td><td>0.0007 &plusmn; 0.0016</td></tr>
+        <tr><td>Real ACDC vs real M&amp;Ms (domain gap)</td><td>78.3</td><td>0.0093 &plusmn; 0.0024</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul class="clean" style="margin-top:14px">
+    <li>The generated images are still far from real ones: KID is about 38 times the floor. This is the gap the conditioned model will be compared against.</li>
+    <li>KID on the external M&amp;Ms set (0.126) is close to ACDC (0.120), so the baseline loses no extra quality on the other scanners.</li>
+    <li>Variety is low. Two noise draws for the same mask differ by 0.044 on average, against 0.35 between generated and real images, so the baseline gives almost one image per mask. This is a limitation to report.</li>
+  </ul>
+
+  <h3>Stage 1: clinical profile to mask</h3>
+  <p>The model takes diagnosis group, chamber volumes, ejection fractions, myocardial mass, BMI, body surface area, slice position and ED or ES phase, and produces a mask. A first conditional VAE ignored most of the profile, because its encoder sees the real mask and so already knows the size. It was replaced by two steps: a random forest predicts the RV, myocardium and LV areas from the profile, and a mask generator trained with the true areas as extra input produces the mask. At generation time the predicted areas get noise of the size of the predictor error, so masks vary.</p>
+  <p>Check: correlation between the area of each generated structure and the area in the real slice, with the real profile and with a shuffled profile as a control. Shuffling should break the link.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Structure</th><th>First VAE (validation)</th><th>Two-step, validation</th><th>Two-step, test (20 patients, 355 slices)</th><th>Shuffled control, test</th></tr></thead>
+      <tbody>
+        <tr><td><strong>RV</strong></td><td>0.24</td><td>0.73</td><td><strong>0.76</strong></td><td>0.07</td></tr>
+        <tr><td><strong>Myocardium</strong></td><td>0.52</td><td>0.62</td><td><strong>0.64</strong></td><td>0.06</td></tr>
+        <tr><td><strong>LV</strong></td><td>0.47</td><td>0.86</td><td><strong>0.85</strong></td><td>-0.10</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:14px">The generated masks follow the clinical profile, and the test patients give the same picture as validation. The masks are plausible but a little blobby. The myocardium is the hardest part, because the wall is thin. Stage 1 is trained on ACDC only, and the check on M&amp;Ms is still to do.</p>
+</section>
+
 <section id="plan">
   <h2>Plan and status</h2>
   <div class="tablewrap">
@@ -328,9 +369,9 @@
       <thead><tr><th>Stage</th><th>Period</th><th>Status</th></tr></thead>
       <tbody>
         <tr><td>Project proposal and literature review draft</td><td>Aug to Sep 2026</td><td class="status-done">Done</td></tr>
-        <tr><td>Dataset investigation and project design</td><td>Sep to early Nov 2026</td><td class="status-now">In progress</td></tr>
-        <tr><td>Baseline development</td><td>Oct to early Nov 2026</td><td class="status-next">Next</td></tr>
-        <tr><td>Clinical-profile conditioning and first evaluation</td><td>Nov to Dec 2026</td><td class="status-next">Planned</td></tr>
+        <tr><td>Dataset investigation and project design</td><td>Sep to early Nov 2026</td><td class="status-done">Done</td></tr>
+        <tr><td>Baseline development</td><td>Oct to early Nov 2026</td><td class="status-done">Done (first version)</td></tr>
+        <tr><td>Clinical-profile conditioning and first evaluation</td><td>Nov to Dec 2026</td><td class="status-now">In progress (stage 1 done)</td></tr>
         <tr><td>Full evaluation: fidelity, utility, privacy</td><td>Jan to Mar 2027</td><td class="status-next">Planned</td></tr>
         <tr><td>Comparative analysis and thesis writing</td><td>Apr to May 2027</td><td class="status-next">Planned</td></tr>
         <tr><td>Thesis submission and presentation</td><td>May to June 2027</td><td class="status-next">Planned</td></tr>
