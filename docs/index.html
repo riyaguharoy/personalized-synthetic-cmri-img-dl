@@ -36,6 +36,8 @@
   .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; margin-top:40px;
            background:var(--hero-statline); border-radius:14px 14px 0 0; overflow:hidden; }
   .stat { background:var(--hero-stat); padding:16px 18px; }
+  a.stat { text-decoration:none; color:inherit; display:block; }
+  a.stat:hover { background:var(--hero-chip); }
   .stat b { display:block; font-size:1.7rem; line-height:1.1; color:var(--hero-fg); }
   .stat span { font-size:13px; color:var(--hero-statfg); }
 
@@ -93,10 +95,10 @@
     <h1>Clinical-Profile-Conditioned Synthetic Cardiac MRI Generation Using Deep Generative Models</h1>
     <p class="sub">A master's thesis project at the University of South-Eastern Norway, in collaboration with Simula Research Laboratory. The aim is to generate synthetic cardiac MR images and their segmentation masks that are guided by a patient's clinical profile, and to test whether that guidance is real, useful and safe. The thesis extends the CBMS pipeline so that synthetic cardiac MRI can be generated for a given clinical profile, such as diagnosis group, height and weight, and evaluated with the same fidelity, utility and privacy framework. The proposal and research questions have been approved by the supervisors. The datasets are prepared, a mask-to-image baseline has been built and evaluated, and the first stage of the conditioned model (clinical profile to mask) is working.</p>
     <div class="stats">
-      <div class="stat"><b>100</b><span>ACDC patients audited</span></div>
-      <div class="stat"><b>345</b><span>M&amp;Ms cases audited</span></div>
-      <div class="stat"><b>5</b><span>ACDC diagnosis groups</span></div>
-      <div class="stat"><b>3</b><span>research questions</span></div>
+      <a class="stat" href="#acdc-audit"><b>100</b><span>ACDC patients audited</span></a>
+      <a class="stat" href="#mnms-audit"><b>345</b><span>M&amp;Ms cases audited</span></a>
+      <a class="stat" href="#acdc-audit"><b>5</b><span>ACDC diagnosis groups</span></a>
+      <a class="stat" href="#questions"><b>3</b><span>research questions</span></a>
     </div>
   </div>
 </header>
