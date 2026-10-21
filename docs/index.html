@@ -395,11 +395,29 @@
   <div class="log">
 
     <details class="entry" open>
+      <summary><span class="date">21 Oct 2026</span><span class="title">Baseline methods: input masks, image generation, outputs</span><span class="chip">Baseline development</span></summary>
+      <div class="body">
+        <figure>
+          <a href="assets/spade_architecture.png" target="_blank" rel="noopener"><img src="assets/spade_architecture.png" alt="Diagram of the baseline. A: the generator turns a 128-value noise vector into a 128 by 128 image in five SPADE residual blocks, and the one-hot mask is given to every block. B: inside one SPADE layer, the mask produces a scale and a shift for each pixel. C: the discriminator sees mask and image together and scores patches as real or fake."></a>
+          <figcaption>Baseline (mask to image). A: the generator. B: one SPADE layer. C: the discriminator and the losses. Click the image to open it full size.</figcaption>
+        </figure>
+        <ul class="clean">
+          <li><strong>Input masks.</strong> Each input is one 2D short-axis slice of a labelled ACDC patient, at end-diastole or end-systole. The mask has four labels (background, right ventricle, myocardium, left ventricle) and is given to the model as four one-hot channels at 128&times;128. Slices with an empty mask are left out. Training uses 1,312 slices from 70 patients, validation 174 slices from 10 patients, and testing 355 slices from 20 patients.</li>
+          <li><strong>How an image is generated.</strong> The generator starts from a random noise vector (128 values), turns it into a small 8&times;8 feature map, and enlarges it in five steps up to 128&times;128. In every step the mask controls the features through SPADE layers, so the mask decides where the chambers and the wall are, and the model fills in the grey-level texture. The output is a 128&times;128 grey-scale image.</li>
+          <li><strong>Training.</strong> The discriminator sees a mask together with an image and scores patches of it as real or fake. The generator is trained to fool it, and also to stay close to the real image of the same slice (feature matching and an L1 pixel loss). Training takes 150 epochs, about 75 minutes on a free GPU.</li>
+          <li><strong>Output and evaluation.</strong> For each mask, a synthetic slice that follows the mask outline. The images are scored with FID and KID against real images from held-out ACDC patients and from M&amp;Ms (see <a href="#results">First results</a>). Only generated results are shown on this page, never images from the datasets.</li>
+          <li><strong>Why this model.</strong> SPADE is the mask-to-image model used as the baseline in Amirrajab et al. (2022) on M&amp;Ms, and a GAN trains in about 75 minutes on a free GPU. The baseline is meant to be simple and well known, so the effect of clinical-profile conditioning can be measured against it. Diffusion and flow models are options for later.</li>
+          <li><strong>Limits.</strong> This is a simplified SPADE: one discriminator scale and no perceptual loss, with an added L1 pixel loss. The L1 loss pulls the output towards one image per mask, so the variety between noise draws is low.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="entry">
       <summary><span class="date">21 Oct 2026</span><span class="title">Stage 1 model architecture, checked against the code</span><span class="chip">Clinical-profile conditioning</span></summary>
       <div class="body">
         <figure>
-          <img src="assets/cvae_architecture.png" alt="Diagram of the stage 1 model. Top: training, where an encoder sees the real mask and the condition, a 16-value latent code is sampled, and a decoder rebuilds the mask. Bottom: generation from a clinical profile, where a random forest predicts areas, noise is added, and the decoder produces a mask.">
-          <figcaption>Stage 1 model. Top (A): training, where the encoder sees the real mask. Bottom (B): generation from a clinical profile, where no real mask is used.</figcaption>
+          <a href="assets/cvae_architecture.png" target="_blank" rel="noopener"><img src="assets/cvae_architecture.png" alt="Diagram of the stage 1 model. Top: training, where an encoder sees the real mask and the condition, a 16-value latent code is sampled, and a decoder rebuilds the mask. Bottom: generation from a clinical profile, where a random forest predicts areas, noise is added, and the decoder produces a mask."></a>
+          <figcaption>Stage 1 model. Top (A): training, where the encoder sees the real mask. Bottom (B): generation from a clinical profile, where no real mask is used. Click the image to open it full size.</figcaption>
         </figure>
         <ul class="clean">
           <li><strong>Type.</strong> A conditional variational autoencoder (VAE): a convolutional encoder and decoder joined by a 16-value latent code, with 2.21 million parameters. There are no skip connections between the encoder and the decoder, so it is not a U-Net.</li>
