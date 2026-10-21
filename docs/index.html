@@ -82,6 +82,20 @@
   td.status-done::before,td.status-now::before,td.status-next::before { content:""; display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:8px; background:currentColor; }
   .status-done { color:#15803d; } .status-now { color:#b45309; } .status-next { color:var(--muted); }
   @media (prefers-color-scheme: dark) { .status-done { color:#4ade80; } .status-now { color:#fbbf24; } }
+  /* progress log */
+  .log { display:grid; gap:14px; }
+  details.entry { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:12px; box-shadow:var(--shadow); }
+  details.entry > summary { cursor:pointer; list-style:none; padding:14px 18px; display:flex; flex-wrap:wrap; gap:6px 12px; align-items:baseline; }
+  details.entry > summary::-webkit-details-marker { display:none; }
+  details.entry > summary::before { content:"+"; font-weight:700; color:var(--accent); width:1em; flex:none; }
+  details.entry[open] > summary::before { content:"\2212"; }
+  details.entry .date { font-size:13px; color:var(--muted); white-space:nowrap; }
+  details.entry .title { font-weight:650; }
+  details.entry .chip { font-size:12px; padding:2px 10px; border-radius:999px; background:var(--accent-soft); color:var(--accent); white-space:nowrap; }
+  details.entry .body { padding:0 18px 8px 18px; }
+  details.entry .body figure { margin:12px 0; }
+  .next { background:var(--card); border:1px solid var(--line); border-top:3px solid var(--heart); border-radius:12px; padding:14px 20px; margin-bottom:16px; box-shadow:var(--shadow); }
+  .next h3 { margin:0 0 6px; }
   code { background:var(--accent-soft); color:var(--accent); padding:2px 7px; border-radius:6px; font-size:13.5px; }
   footer { margin-top:64px; padding:28px 0 44px; border-top:1px solid var(--line); color:var(--muted); font-size:14px; }
   @media (max-width:600px){ header.hero{padding-top:44px} main section{padding-top:40px} th,td{padding:8px 10px} }
@@ -114,6 +128,7 @@
     <a href="#mnms-audit">M&amp;Ms audit</a>
     <a href="#preprocessing">Preprocessed data</a>
     <a href="#results">First results</a>
+    <a href="#progress">Progress log</a>
     <a href="#plan">Plan and status</a>
     <a href="#repo">Repository</a>
   </div>
@@ -349,7 +364,7 @@
   </ul>
 
   <h3>Stage 1: clinical profile to mask</h3>
-  <p>The model takes diagnosis group, chamber volumes, ejection fractions, myocardial mass, BMI, body surface area, slice position and ED or ES phase, and produces a mask. A first conditional VAE ignored most of the profile, because its encoder sees the real mask and so already knows the size. It was replaced by two steps: a random forest predicts the RV, myocardium and LV areas from the profile, and a mask generator trained with the true areas as extra input produces the mask. At generation time the predicted areas get noise of the size of the predictor error, so masks vary.</p>
+  <p>The model takes diagnosis group, chamber volumes, ejection fractions, myocardial mass, BMI, body surface area, slice position and ED or ES phase, and produces a mask. A first conditional VAE ignored most of the profile, because its encoder sees the real mask and so already knows the size. It was replaced by two steps: a random forest predicts the RV, myocardium and LV areas from the profile, and a mask generator trained with the true areas as extra input produces the mask. At generation time the predicted areas get noise of the size of the predictor error, so masks vary. The model architecture is in the <a href="#progress">progress log</a>.</p>
   <p>Check: correlation between the area of each generated structure and the area in the real slice, with the real profile and with a shuffled profile as a control. Shuffling should break the link.</p>
   <div class="tablewrap">
     <table>
@@ -362,6 +377,71 @@
     </table>
   </div>
   <p style="margin-top:14px">The generated masks follow the clinical profile, and the test patients give the same picture as validation. The masks are plausible but a little blobby. The myocardium is the hardest part, because the wall is thin. Stage 1 is trained on ACDC only, and the check on M&amp;Ms is still to do.</p>
+</section>
+
+<section id="progress">
+  <h2>Progress log</h2>
+  <p>What has been done so far, newest first. Each entry says which stage of the <a href="#plan">plan</a> it belongs to. Click an entry to open it.</p>
+
+  <div class="next">
+    <h3>Next</h3>
+    <ul class="clean" style="margin:0">
+      <li>Study the 12 to 14 features used in the ACDC classification task and how each is calculated from the masks, to use them as conditions.</li>
+      <li>Write up the baseline methods: input masks, how images are generated, and the outputs.</li>
+      <li>Stage 2: give the generated masks to the trained baseline to make images, and measure FID and KID.</li>
+    </ul>
+  </div>
+
+  <div class="log">
+
+    <details class="entry" open>
+      <summary><span class="date">21 Oct 2026</span><span class="title">Stage 1 model architecture, checked against the code</span><span class="chip">Clinical-profile conditioning</span></summary>
+      <div class="body">
+        <figure>
+          <img src="assets/cvae_architecture.png" alt="Diagram of the stage 1 model. Top: training, where an encoder sees the real mask and the condition, a 16-value latent code is sampled, and a decoder rebuilds the mask. Bottom: generation from a clinical profile, where a random forest predicts areas, noise is added, and the decoder produces a mask.">
+          <figcaption>Stage 1 model. Top (A): training, where the encoder sees the real mask. Bottom (B): generation from a clinical profile, where no real mask is used.</figcaption>
+        </figure>
+        <ul class="clean">
+          <li><strong>Type.</strong> A conditional variational autoencoder (VAE): a convolutional encoder and decoder joined by a 16-value latent code, with 2.21 million parameters. There are no skip connections between the encoder and the decoder, so it is not a U-Net.</li>
+          <li><strong>Condition (19 values).</strong> The diagnosis group (one-hot), nine measured numbers (LV and RV volume at ED and ES, myocardial mass, LV and RV ejection fraction, BMI, body surface area), slice position, the ED or ES phase, and the three predicted areas. The condition goes into the encoder, and into the decoder together with the latent code.</li>
+          <li><strong>Training (A).</strong> The encoder sees the real mask and the condition. The decoder learns to rebuild the mask from the latent code and the same condition. The loss is a class-weighted cross-entropy plus a KL term that keeps the latent code close to a standard normal distribution.</li>
+          <li><strong>Generation (B).</strong> No real mask is used. The random forest predicts the areas from the profile, noise is added, the decoder receives a random latent code and the condition, and stray specks are removed by keeping the largest region of each class.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="entry">
+      <summary><span class="date">15 Oct 2026</span><span class="title">Direction agreed: features first, then mask, then image</span><span class="chip">Clinical-profile conditioning</span></summary>
+      <div class="body">
+        <p>The plan agreed with the supervisors is to generate the mask from a set of 12 to 14 features that are used in the ACDC classification task (volumes, ejection fractions, myocardial mass and ratios, all calculated from the masks), and then to generate the image from that mask. This gives control over the output by feature value, instead of by diagnosis class alone.</p>
+      </div>
+    </details>
+
+    <details class="entry">
+      <summary><span class="date">15 Oct 2026</span><span class="title">Stage 1 works on the held-out test patients</span><span class="chip">Clinical-profile conditioning</span></summary>
+      <div class="body">
+        <p>A first conditional VAE ignored most of the profile, because its encoder sees the real mask. A two-step version follows it: a random forest predicts the areas, and the mask generator uses them. On the 20 test patients, the correlation between generated and real areas is 0.76 (RV), 0.64 (myocardium) and 0.85 (LV), against about 0 with a shuffled profile. Numbers and the full table are in <a href="#results">First results</a>.</p>
+      </div>
+    </details>
+
+    <details class="entry">
+      <summary><span class="date">Oct 2026</span><span class="title">Baseline (mask to image) trained and evaluated</span><span class="chip">Baseline development</span></summary>
+      <div class="body">
+        <p>A SPADE-style conditional GAN, written from scratch, trained on the ACDC training patients and tested on held-out ACDC patients and on M&amp;Ms. KID is 0.120 on ACDC and 0.126 on M&amp;Ms, against a real-versus-real floor of 0.003. The images are still far from real ones, and the variety per mask is low. See <a href="#results">First results</a>.</p>
+      </div>
+    </details>
+
+    <details class="entry">
+      <summary><span class="date">Sep to Oct 2026</span><span class="title">Datasets audited and preprocessed</span><span class="chip">Dataset investigation</span></summary>
+      <div class="body">
+        <p>ACDC (100 patients, 1,902 slices) and M&amp;Ms (345 cases, 7,908 slices) were audited and converted to the same format: 2D short-axis slices at ED and ES, 1.5 mm pixels, 128&times;128, splits by patient. See the <a href="#acdc-audit">ACDC audit</a>, the <a href="#mnms-audit">M&amp;Ms audit</a> and <a href="#preprocessing">preprocessed data</a>.</p>
+      </div>
+    </details>
+
+    <!-- TO ADD A NEW ENTRY: copy one whole entry block above, paste it at the top of this list, then change the date, title, stage chip and text.
+         Use the stage names from the plan table. Only the newest entry should have the word "open" in its opening tag. -->
+
+  </div>
 </section>
 
 <section id="plan">
