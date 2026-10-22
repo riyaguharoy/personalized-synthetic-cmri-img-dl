@@ -105,9 +105,9 @@
 
 <header class="hero">
   <div class="wrap">
-    <span class="badge">Work in progress &middot; baseline done, conditioned model started, autumn 2026</span>
+    <span class="badge">Work in progress &middot; baseline done, conditioned model built end to end, autumn 2026</span>
     <h1>Clinical-Profile-Conditioned Synthetic Cardiac MRI Generation Using Deep Generative Models</h1>
-    <p class="sub">A master's thesis project at the University of South-Eastern Norway, in collaboration with Simula Research Laboratory. The aim is to generate synthetic cardiac MR images and their segmentation masks that are guided by a patient's clinical profile, and to test whether that guidance is real, useful and safe. The thesis extends the CBMS pipeline so that synthetic cardiac MRI can be generated for a given clinical profile, such as diagnosis group, height and weight, and evaluated with the same fidelity, utility and privacy framework. The proposal and research questions have been approved by the supervisors. The datasets are prepared, a mask-to-image baseline has been built and evaluated, and the first stage of the conditioned model (clinical profile to mask) is working.</p>
+    <p class="sub">A master's thesis project at the University of South-Eastern Norway, in collaboration with Simula Research Laboratory. The aim is to generate synthetic cardiac MR images and their segmentation masks that are guided by a patient's clinical profile, and to test whether that guidance is real, useful and safe. The thesis extends the CBMS pipeline so that synthetic cardiac MRI can be generated for a given clinical profile, such as diagnosis group, height and weight, and evaluated with the same fidelity, utility and privacy framework. The proposal and research questions have been approved by the supervisors. The datasets are prepared, a mask-to-image baseline has been built and evaluated, and the conditioned model now runs end to end: clinical features become a mask, and the mask becomes an image. First results are in, with one known weakness (see First results).</p>
     <div class="stats">
       <a class="stat" href="#acdc-audit"><b>100</b><span>ACDC patients audited</span></a>
       <a class="stat" href="#mnms-audit"><b>345</b><span>M&amp;Ms cases audited</span></a>
@@ -347,7 +347,7 @@
 
 <section id="results">
   <h2>First results</h2>
-  <p>Early results from single runs, so no averages over seeds yet. The conditioned model has two stages: a clinical profile becomes a segmentation mask (stage 1), and the mask becomes an image with the baseline (stage 2, not yet built).</p>
+  <p>Early results from single runs, so no averages over seeds yet. The conditioned model has two stages: clinical information becomes a segmentation mask (stage 1), and the mask becomes an image with the baseline (stage 2). Stage 1 was first built on a diagnosis-and-measurements profile, then rebuilt on the 12 to 14 classification features agreed with the supervisors.</p>
 
   <h3>Baseline: mask to image</h3>
   <p>A SPADE-style conditional GAN, written from scratch and trained on the ACDC training patients (150 epochs, about 75 minutes on a free GPU). Slices with an empty mask are left out. Image quality is measured with FID and KID, against a floor: the score of real images against other real images.</p>
@@ -383,6 +383,56 @@
     </table>
   </div>
   <p style="margin-top:14px">The generated masks follow the clinical profile, and the test patients give the same picture as validation. The masks are plausible but a little blobby. The myocardium is the hardest part, because the wall is thin. Stage 1 is trained on ACDC only, and the check on M&amp;Ms is still to do.</p>
+
+  <h3>Stage 1, rebuilt on the 14 classification features</h3>
+  <p>Following the direction agreed on 15 October, the mask is now generated from the 14 features used in the ACDC classification task (Wolterink et al.): height, weight, LV, RV and myocardium volume at ED and ES, LV and RV ejection fraction, and the RV/LV and myocardium/LV volume ratios at ED and ES. All of them are calculated from the masks (pixel count times voxel volume), and they match the earlier audit values (correlation 0.999 or higher). Group means show that they separate the five diagnoses.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Group</th><th>LV end-diastolic volume (mL)</th><th>LV EF (%)</th><th>RV/LV volume ratio (ED)</th><th>Myocardium/LV volume ratio (ED)</th></tr></thead>
+      <tbody>
+        <tr><td><strong>DCM</strong></td><td>285.0</td><td>18.3</td><td>0.62</td><td>0.57</td></tr>
+        <tr><td><strong>HCM</strong></td><td>128.8</td><td>67.7</td><td>0.93</td><td>1.34</td></tr>
+        <tr><td><strong>MINF</strong></td><td>172.2</td><td>31.0</td><td>0.72</td><td>0.71</td></tr>
+        <tr><td><strong>NOR</strong></td><td>130.3</td><td>60.4</td><td>1.17</td><td>0.74</td></tr>
+        <tr><td><strong>RV</strong></td><td>107.1</td><td>54.7</td><td>2.00</td><td>0.71</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:14px">The condition for each slice is these 14 numbers plus the slice position and the ED or ES phase (16 values). Small noise is added to the 14 features during training, so the model cannot simply memorise each patient. Check: masks are generated for the validation patients (10 patients), the volumes are measured on the generated masks, and they are compared with the values that were requested, with the real features and with features shuffled between patients as a control.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Feature, per patient (generated vs requested)</th><th>Real features, correlation</th><th>Shuffled control, correlation</th></tr></thead>
+      <tbody>
+        <tr><td>LV end-diastolic volume</td><td><strong>0.92</strong></td><td>0.15</td></tr>
+        <tr><td>LV ejection fraction</td><td><strong>0.62</strong></td><td>0.28</td></tr>
+        <tr><td>RV/LV volume ratio</td><td><strong>0.87</strong></td><td>-0.16</td></tr>
+        <tr><td>Myocardium/LV volume ratio</td><td><strong>0.86</strong></td><td>-0.27</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul class="clean" style="margin-top:14px">
+    <li>The generated masks follow the requested features: a larger requested LV gives a larger generated LV. Only 10 patients were used, so these correlations are rough.</li>
+    <li>The values are not yet exact. The mean error is about 53 mL for LV volume and about 15 percentage points for ejection fraction, which is a difference of two volumes.</li>
+    <li>The check on the 20 test patients is run once, with the final settings, and will be added here.</li>
+  </ul>
+
+  <h3>Stage 2: generated masks into the baseline</h3>
+  <p>For each of the 355 ACDC test slices, a mask was generated from the 14 features of its patient (three noise seeds), and the baseline made an image from it. These images are compared with the real test images. The reference is the same baseline given the real masks.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Masks given to the baseline</th><th>FID</th><th>KID</th></tr></thead>
+      <tbody>
+        <tr><td>Real masks (reference)</td><td>166.9</td><td>0.119 &plusmn; 0.008</td></tr>
+        <tr><td>Masks generated from the 14 features (mean of 3 seeds)</td><td>186.9 &plusmn; 2.8</td><td>0.138 &plusmn; 0.004</td></tr>
+        <tr><td>Floor: real train vs real test images</td><td>82.2</td><td>0.0033 &plusmn; 0.0016</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul class="clean" style="margin-top:14px">
+    <li>Controlling the mask with clinical features costs a little image quality: FID 167 to 187, KID 0.119 to 0.138. Most of the distance to the floor comes from the baseline image model itself, since even real masks give FID 167.</li>
+    <li><strong>Known weakness.</strong> Only 68% of the generated slices contain a left-ventricle label, against 98% of the real test slices, and the mean LV area is about half of the real one (373 against 703 pixels). In many slices the model draws a solid wall without the cavity. This is the first thing to improve.</li>
+    <li>FID is biased upwards with few images (355 here), so KID is the more reliable of the two.</li>
+  </ul>
 </section>
 
 <section id="progress">
@@ -392,15 +442,39 @@
   <div class="next">
     <h3>Next</h3>
     <ul class="clean" style="margin:0">
-      <li>Study the 12 to 14 features used in the ACDC classification task and how each is calculated from the masks, to use them as conditions.</li>
-      <li>Write up the baseline methods: input masks, how images are generated, and the outputs.</li>
-      <li>Stage 2: give the generated masks to the trained baseline to make images, and measure FID and KID.</li>
+      <li>Fix the missing LV cavity in generated masks (for example a heavier LV weight in the loss), and check again on validation.</li>
+      <li>Run the final check on the 20 test patients and add it to the results.</li>
+      <li>Check stage 1 on M&amp;Ms once the label mapping is agreed.</li>
+      <li>Utility (segmentation trained on synthetic data) and privacy tests.</li>
     </ul>
   </div>
 
   <div class="log">
 
     <details class="entry" open>
+      <summary><span class="date">22 Oct 2026</span><span class="title">Stage 2: generated masks into the baseline, FID and KID</span><span class="chip">Clinical-profile conditioning</span></summary>
+      <div class="body">
+        <ul class="clean">
+          <li><strong>What was done.</strong> For each of the 355 ACDC test slices, a mask was generated from the 14 features of its patient, and the baseline turned it into an image. Three noise seeds, all run in one saved notebook.</li>
+          <li><strong>Result.</strong> FID 186.9 and KID 0.138 with generated masks, against FID 166.9 and KID 0.119 with real masks, and a floor of 82.2 and 0.0033. Details in <a href="#results">First results</a>.</li>
+          <li><strong>Weakness found.</strong> About a third of the generated slices have no left-ventricle cavity, and the LV is about half the real size. This is the next thing to fix.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="entry">
+      <summary><span class="date">22 Oct 2026</span><span class="title">The 14 classification features, and stage 1 conditioned on them</span><span class="chip">Clinical-profile conditioning</span></summary>
+      <div class="body">
+        <ul class="clean">
+          <li><strong>Which features.</strong> The ACDC classification papers use different numbers of features: 11 and 14 in the challenge report (Khened, Wolterink), about 20 in the Khened journal paper, and 567 radiomics features in Cetin. The 14 of Wolterink et al. were used as the starting set. No paper with 65 features was found.</li>
+          <li><strong>How they are calculated.</strong> Volume is the pixel count times the voxel volume (1.5 mm &times; 1.5 mm &times; slice thickness). Ejection fraction is the ED volume minus the ES volume, divided by the ED volume. The ratios are one volume divided by another.</li>
+          <li><strong>Check.</strong> The volumes match the earlier audit values (correlation 0.999 or higher, mean difference under 1 mL), and the group means follow the diagnoses (see <a href="#results">First results</a>).</li>
+          <li><strong>Stage 1 on the features.</strong> The conditional VAE now takes the 14 features, the slice position and the ED or ES phase. On validation patients the generated volumes follow the requested ones (correlation 0.62 to 0.92), and shuffled features break the link.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="entry">
       <summary><span class="date">21 Oct 2026</span><span class="title">Baseline methods: input masks, image generation, outputs</span><span class="chip">Baseline development</span></summary>
       <div class="body">
         <figure>
@@ -477,7 +551,7 @@
         <tr><td>Project proposal and literature review draft</td><td>Aug to Sep 2026</td><td class="status-done">Done</td></tr>
         <tr><td>Dataset investigation and project design</td><td>Sep to early Nov 2026</td><td class="status-done">Done</td></tr>
         <tr><td>Baseline development</td><td>Oct to early Nov 2026</td><td class="status-done">Done (first version)</td></tr>
-        <tr><td>Clinical-profile conditioning and first evaluation</td><td>Nov to Dec 2026</td><td class="status-now">In progress (stage 1 done)</td></tr>
+        <tr><td>Clinical-profile conditioning and first evaluation</td><td>Nov to Dec 2026</td><td class="status-now">In progress (both stages built, LV weakness to fix)</td></tr>
         <tr><td>Full evaluation: fidelity, utility, privacy</td><td>Jan to Mar 2027</td><td class="status-next">Planned</td></tr>
         <tr><td>Comparative analysis and thesis writing</td><td>Apr to May 2027</td><td class="status-next">Planned</td></tr>
         <tr><td>Thesis submission and presentation</td><td>May to June 2027</td><td class="status-next">Planned</td></tr>
