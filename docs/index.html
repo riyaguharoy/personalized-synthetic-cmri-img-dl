@@ -413,7 +413,24 @@
   <ul class="clean" style="margin-top:14px">
     <li>The generated masks follow the requested features: a larger requested LV gives a larger generated LV. Only 10 patients were used, so these correlations are rough.</li>
     <li>The values are not yet exact. The mean error is about 53 mL for LV volume and about 15 percentage points for ejection fraction, which is a difference of two volumes.</li>
-    <li>The check on the 20 test patients is run once, with the final settings, and will be added here.</li>
+  </ul>
+  <p>The same check was then run once on the 20 test patients, with the final settings:</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Feature, per patient (generated vs requested), 20 test patients</th><th>Real features, correlation</th><th>Shuffled control, correlation</th><th>Mean error, real features</th></tr></thead>
+      <tbody>
+        <tr><td>LV end-diastolic volume</td><td><strong>0.96</strong></td><td>0.32</td><td>81 mL</td></tr>
+        <tr><td>LV ejection fraction</td><td><strong>0.88</strong></td><td>0.30</td><td>16 points</td></tr>
+        <tr><td>RV/LV volume ratio</td><td><strong>0.86</strong></td><td>-0.05</td><td>3.90</td></tr>
+        <tr><td>Myocardium/LV volume ratio</td><td><strong>0.89</strong></td><td>0.51</td><td>2.56</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:14px">Per slice, the correlation between generated and real area is 0.40 (RV), 0.39 (myocardium) and 0.62 (LV), against 0.00, 0.13 and 0.19 with shuffled features.</p>
+  <ul class="clean">
+    <li>On the test patients, the generated masks rank the patients correctly by LV volume, ejection fraction and the two ratios (correlation 0.86 to 0.96).</li>
+    <li>The absolute values are not accurate. The LV volume is too small on average (error 81 mL), which fits the missing-LV weakness described under stage 2. The ratio errors are large because the LV is the divisor, and a small or missing generated LV inflates them.</li>
+    <li>The shuffled control is not clean for the myocardium/LV ratio (0.51). With 20 patients, a correlation of about 0.44 can arise by chance, so this is only slightly above chance, but it means that ratio is the least convincing.</li>
   </ul>
 
   <h3>Stage 2: generated masks into the baseline</h3>
@@ -443,7 +460,6 @@
     <h3>Next</h3>
     <ul class="clean" style="margin:0">
       <li>Fix the missing LV cavity in generated masks (for example a heavier LV weight in the loss), and check again on validation.</li>
-      <li>Run the final check on the 20 test patients and add it to the results.</li>
       <li>Check stage 1 on M&amp;Ms once the label mapping is agreed.</li>
       <li>Utility (segmentation trained on synthetic data) and privacy tests.</li>
     </ul>
@@ -469,7 +485,7 @@
           <li><strong>Which features.</strong> The ACDC classification papers use different numbers of features: 11 and 14 in the challenge report (Khened, Wolterink), about 20 in the Khened journal paper, and 567 radiomics features in Cetin. The 14 of Wolterink et al. were used as the starting set. No paper with 65 features was found.</li>
           <li><strong>How they are calculated.</strong> Volume is the pixel count times the voxel volume (1.5 mm &times; 1.5 mm &times; slice thickness). Ejection fraction is the ED volume minus the ES volume, divided by the ED volume. The ratios are one volume divided by another.</li>
           <li><strong>Check.</strong> The volumes match the earlier audit values (correlation 0.999 or higher, mean difference under 1 mL), and the group means follow the diagnoses (see <a href="#results">First results</a>).</li>
-          <li><strong>Stage 1 on the features.</strong> The conditional VAE now takes the 14 features, the slice position and the ED or ES phase. On validation patients the generated volumes follow the requested ones (correlation 0.62 to 0.92), and shuffled features break the link.</li>
+          <li><strong>Stage 1 on the features.</strong> The conditional VAE now takes the 14 features, the slice position and the ED or ES phase. On validation patients the generated volumes follow the requested ones (correlation 0.62 to 0.92), and shuffled features break the link. On the 20 test patients the correlation is 0.86 to 0.96 (shuffled: 0.32 at most, except 0.51 for the myocardium/LV ratio), but the absolute values are off, mainly because the LV is too small.</li>
         </ul>
       </div>
     </details>
