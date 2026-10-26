@@ -82,6 +82,8 @@
   td.status-done::before,td.status-now::before,td.status-next::before { content:""; display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:8px; background:currentColor; }
   .status-done { color:#15803d; } .status-now { color:#b45309; } .status-next { color:var(--muted); }
   @media (prefers-color-scheme: dark) { .status-done { color:#4ade80; } .status-now { color:#fbbf24; } }
+  .eq { font-family:Georgia,'Times New Roman',serif; font-style:italic; }
+  .eq sub, .eq sup { font-size:.75em; }
   /* progress log */
   .log { display:grid; gap:14px; }
   details.entry { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:12px; box-shadow:var(--shadow); }
@@ -127,6 +129,7 @@
     <a href="#acdc-audit">ACDC audit</a>
     <a href="#mnms-audit">M&amp;Ms audit</a>
     <a href="#preprocessing">Preprocessed data</a>
+    <a href="#features">The 14 features</a>
     <a href="#results">First results</a>
     <a href="#progress">Progress log</a>
     <a href="#plan">Plan and status</a>
@@ -170,6 +173,11 @@
   <figure>
     <img src="assets/generation_strategies.png" alt="Strategy 1: one model produces image and mask together. Strategy 2: a mask is generated first and then used to guide image generation">
     <figcaption>Strategy 1 generates the image and mask together in one step. Strategy 2 generates the mask first and uses it to guide the image. The final choice depends on the dataset investigation and early experiments.</figcaption>
+  </figure>
+  <h3>The experimental pipeline</h3>
+  <figure>
+    <a href="assets/pipeline_diagram.png" target="_blank" rel="noopener"><img src="assets/pipeline_diagram.png" alt="Pipeline diagram: data split into 85 training and 15 validation patients, the 14 features calculated from the masks, stage 1 features to mask, stage 2 mask to image, checks on validation, experiments A, B and C, and the test sets kept untouched until the end."></a>
+    <figcaption>Step-by-step experimental flow. Green: built. Orange: in progress. Grey: planned. Red: untouched until the final stage. Click the image to open it full size.</figcaption>
   </figure>
   <h3>How the results will be judged</h3>
   <ul class="clean">
@@ -321,7 +329,7 @@
       <h3>ACDC (training and testing)</h3>
       <ul class="clean">
         <li>100 patients, 1,902 slices</li>
-        <li>Per diagnosis group: 14 patients for training, 2 for validation, 4 for testing</li>
+        <li>Per diagnosis group, from 22 Oct: 17 patients for training and 3 for validation (85 and 15 in total). The original ACDC test set stays untouched until the final stage. The earlier split (14 / 2 / 4) was used for the first results below.</li>
         <li>No mask touches the image border after cropping</li>
       </ul>
     </div>
@@ -345,17 +353,76 @@
   <div class="note"><strong>A caution for the external test.</strong> The same diagnosis label means different severity in the two datasets. The mean LV ejection fraction of the DCM group is 18% in ACDC but 48% in M&amp;Ms, with a wide spread (5% to 85%). Results on M&amp;Ms will therefore also be reported by measured ejection fraction, not only by diagnosis.</div>
 </section>
 
+<section id="features">
+  <h2>The 14 features: what they are and how they are calculated</h2>
+  <p>The mask model is controlled by 14 numbers that describe the heart. They are the features used to classify the five ACDC diagnoses in the challenge paper by Wolterink et al., which is why they carry the diagnosis information. Twelve of the 14 are calculated from a segmentation mask. Only height and weight come from the patient file. This section explains each one from the beginning.</p>
+
+  <h3>Step 1: from a mask to a volume</h3>
+  <p>A mask labels every pixel as background, right ventricle (RV), myocardium (MYO) or left ventricle (LV). The heart is scanned as a stack of 2D slices, so a volume is the number of pixels with a given label, added up over all slices, times the volume of one voxel (one pixel times the slice thickness).</p>
+  <p class="eq" style="white-space:normal;text-align:center;font-size:1.1rem">V<sub>k</sub><sup>ph</sup> = N<sub>k</sub><sup>ph</sup> &times; &Delta;x &times; &Delta;y &times; &Delta;z &divide; 1000</p>
+  <ul class="clean">
+    <li><span class="eq">k</span> is the structure: LV, RV or MYO. <span class="eq">ph</span> is the phase: ED (end-diastole, the heart is full) or ES (end-systole, the heart has squeezed).</li>
+    <li><span class="eq">N<sub>k</sub><sup>ph</sup></span> is the number of pixels labelled <span class="eq">k</span>, summed over all slices of that phase.</li>
+    <li><span class="eq">&Delta;x</span> and <span class="eq">&Delta;y</span> are the pixel size, 1.5 mm after preprocessing. <span class="eq">&Delta;z</span> is the slice thickness in mm (it differs between patients, for example 10 mm).</li>
+    <li>Dividing by 1000 converts mm&sup3; to mL.</li>
+  </ul>
+  <p><strong>Worked example (round numbers, not a real patient).</strong> If 1,200 pixels carry the LV label over all ED slices, and the slice thickness is 10 mm, one voxel is 1.5 &times; 1.5 &times; 10 = 22.5 mm&sup3;. The LV volume is 1,200 &times; 22.5 = 27,000 mm&sup3; = 27 mL.</p>
+
+  <h3>Step 2: the 14 features</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>#</th><th>Feature</th><th>Equation</th><th>In words</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><strong>Height</strong></td><td class="eq">H (cm)</td><td>From the patient file.</td></tr>
+        <tr><td>2</td><td><strong>Weight</strong></td><td class="eq">W (kg)</td><td>From the patient file.</td></tr>
+        <tr><td>3</td><td><strong>LV volume at ED</strong></td><td class="eq">V<sub>LV</sub><sup>ED</sup></td><td>Blood volume of the left ventricle when it is fullest.</td></tr>
+        <tr><td>4</td><td><strong>RV volume at ED</strong></td><td class="eq">V<sub>RV</sub><sup>ED</sup></td><td>Blood volume of the right ventricle when it is fullest.</td></tr>
+        <tr><td>5</td><td><strong>Myocardium volume at ED</strong></td><td class="eq">V<sub>MYO</sub><sup>ED</sup></td><td>Volume of the heart muscle around the left ventricle at ED. It grows when the wall is thick.</td></tr>
+        <tr><td>6</td><td><strong>LV volume at ES</strong></td><td class="eq">V<sub>LV</sub><sup>ES</sup></td><td>Left-ventricle volume after the contraction.</td></tr>
+        <tr><td>7</td><td><strong>RV volume at ES</strong></td><td class="eq">V<sub>RV</sub><sup>ES</sup></td><td>Right-ventricle volume after the contraction.</td></tr>
+        <tr><td>8</td><td><strong>Myocardium volume at ES</strong></td><td class="eq">V<sub>MYO</sub><sup>ES</sup></td><td>Muscle volume after the contraction.</td></tr>
+        <tr><td>9</td><td><strong>LV ejection fraction</strong></td><td class="eq">EF<sub>LV</sub> = 100 &times; (V<sub>LV</sub><sup>ED</sup> &minus; V<sub>LV</sub><sup>ES</sup>) &divide; V<sub>LV</sub><sup>ED</sup></td><td>The percentage of the LV blood that is pumped out in one beat.</td></tr>
+        <tr><td>10</td><td><strong>RV ejection fraction</strong></td><td class="eq">EF<sub>RV</sub> = 100 &times; (V<sub>RV</sub><sup>ED</sup> &minus; V<sub>RV</sub><sup>ES</sup>) &divide; V<sub>RV</sub><sup>ED</sup></td><td>The same for the right ventricle.</td></tr>
+        <tr><td>11</td><td><strong>RV/LV ratio at ED</strong></td><td class="eq">R<sub>RV/LV</sub><sup>ED</sup> = V<sub>RV</sub><sup>ED</sup> &divide; V<sub>LV</sub><sup>ED</sup></td><td>How large the right ventricle is compared with the left one when full.</td></tr>
+        <tr><td>12</td><td><strong>RV/LV ratio at ES</strong></td><td class="eq">R<sub>RV/LV</sub><sup>ES</sup> = V<sub>RV</sub><sup>ES</sup> &divide; V<sub>LV</sub><sup>ES</sup></td><td>The same after the contraction.</td></tr>
+        <tr><td>13</td><td><strong>MYO/LV ratio at ED</strong></td><td class="eq">R<sub>MYO/LV</sub><sup>ED</sup> = V<sub>MYO</sub><sup>ED</sup> &divide; V<sub>LV</sub><sup>ED</sup></td><td>How thick the muscle is compared with the blood volume it surrounds.</td></tr>
+        <tr><td>14</td><td><strong>MYO/LV ratio at ES</strong></td><td class="eq">R<sub>MYO/LV</sub><sup>ES</sup> = V<sub>MYO</sub><sup>ES</sup> &divide; V<sub>LV</sub><sup>ES</sup></td><td>The same after the contraction.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:14px"><strong>Worked example for the ejection fraction.</strong> If the LV volume is 150 mL at ED and 60 mL at ES, then EF = 100 &times; (150 &minus; 60) &divide; 150 = 60%. A weak, dilated heart might go from 285 mL to 233 mL, which gives EF = 100 &times; 52 &divide; 285 = 18%.</p>
+
+  <h3>Why these features describe the diagnosis</h3>
+  <ul class="clean">
+    <li><strong>DCM</strong> (dilated): a very large LV volume and a low EF.</li>
+    <li><strong>HCM</strong> (thick muscle): a small LV, a high EF and a high MYO/LV ratio.</li>
+    <li><strong>MINF</strong> (after infarction): a reduced EF with a moderately enlarged LV.</li>
+    <li><strong>NOR</strong> (normal): values in the middle.</li>
+    <li><strong>RV</strong> (abnormal right ventricle): a high RV/LV ratio.</li>
+  </ul>
+  <p>The group means in the <a href="#acdc-audit">ACDC audit</a> and in <a href="#results">First results</a> show exactly this pattern. The features were checked against the earlier audit values: the correlation is 0.999 or higher and the mean difference is under 1 mL.</p>
+
+  <h3>Limits to keep in mind</h3>
+  <ul class="clean">
+    <li>The volumes use the pixel size after resampling to 1.5 mm and the slice thickness from the scan header. Gaps between slices are not modelled.</li>
+    <li>Features 3 to 14 come from the masks, so they describe the heart's size and function, not its texture or the scanner.</li>
+    <li>Wall thickness, shape and radiomics features, which some other papers use, are not among these 14.</li>
+  </ul>
+  <p style="font-size:14px;color:var(--muted)">Feature set: Wolterink et al., Automatic Segmentation and Disease Classification Using Cardiac Cine MR Images (<a href="https://arxiv.org/abs/1708.01141">arXiv 1708.01141</a>), as used in the ACDC challenge (Bernard et al., 2018).</p>
+</section>
+
 <section id="results">
   <h2>First results</h2>
-  <p>Early results from single runs, so no averages over seeds yet. The conditioned model has two stages: clinical information becomes a segmentation mask (stage 1), and the mask becomes an image with the baseline (stage 2). Stage 1 was first built on a diagnosis-and-measurements profile, then rebuilt on the 12 to 14 classification features agreed with the supervisors.</p>
+  <div class="note"><strong>About the data split.</strong> On 22 October the split changed to 85 training and 15 validation patients, with the original ACDC test set kept untouched until the end. The numbers below were produced earlier, on a 70 / 10 / 20 split. The 20 patients called &ldquo;held-out&rdquo; below now belong to the training and validation pool, and the results will be repeated on the new split.</div>
+  <p style="margin-top:14px">Early results from single runs, so no averages over seeds yet. The conditioned model has two stages: clinical information becomes a segmentation mask (stage 1), and the mask becomes an image with the baseline (stage 2). Stage 1 was first built on a diagnosis-and-measurements profile, then rebuilt on the 12 to 14 classification features agreed with the supervisors.</p>
 
   <h3>Baseline: mask to image</h3>
   <p>A SPADE-style conditional GAN, written from scratch and trained on the ACDC training patients (150 epochs, about 75 minutes on a free GPU). Slices with an empty mask are left out. Image quality is measured with FID and KID, against a floor: the score of real images against other real images.</p>
   <div class="tablewrap">
     <table>
-      <thead><tr><th>Test set</th><th>FID</th><th>KID</th></tr></thead>
+      <thead><tr><th>Evaluation set</th><th>FID</th><th>KID</th></tr></thead>
       <tbody>
-        <tr><td>Generated vs real, ACDC test patients (355 slices)</td><td>167.1</td><td>0.120 &plusmn; 0.008</td></tr>
+        <tr><td>Generated vs real, 20 held-out ACDC patients of the earlier split (355 slices)</td><td>167.1</td><td>0.120 &plusmn; 0.008</td></tr>
         <tr><td>Floor: real vs real, ACDC</td><td>83.8</td><td>0.0032 &plusmn; 0.0013</td></tr>
         <tr><td>Generated vs real, M&amp;Ms (external, 1,500 slices)</td><td>132.4</td><td>0.126 &plusmn; 0.008</td></tr>
         <tr><td>Floor: real vs real, M&amp;Ms</td><td>29.1</td><td>0.0007 &plusmn; 0.0016</td></tr>
@@ -374,7 +441,7 @@
   <p>Check: correlation between the area of each generated structure and the area in the real slice, with the real profile and with a shuffled profile as a control. Shuffling should break the link.</p>
   <div class="tablewrap">
     <table>
-      <thead><tr><th>Structure</th><th>First VAE (validation)</th><th>Two-step, validation</th><th>Two-step, test (20 patients, 355 slices)</th><th>Shuffled control, test</th></tr></thead>
+      <thead><tr><th>Structure</th><th>First VAE (validation)</th><th>Two-step, validation</th><th>Two-step, 20 held-out patients (earlier split, 355 slices)</th><th>Shuffled control, held-out</th></tr></thead>
       <tbody>
         <tr><td><strong>RV</strong></td><td>0.24</td><td>0.73</td><td><strong>0.76</strong></td><td>0.07</td></tr>
         <tr><td><strong>Myocardium</strong></td><td>0.52</td><td>0.62</td><td><strong>0.64</strong></td><td>0.06</td></tr>
@@ -382,7 +449,7 @@
       </tbody>
     </table>
   </div>
-  <p style="margin-top:14px">The generated masks follow the clinical profile, and the test patients give the same picture as validation. The masks are plausible but a little blobby. The myocardium is the hardest part, because the wall is thin. Stage 1 is trained on ACDC only, and the check on M&amp;Ms is still to do.</p>
+  <p style="margin-top:14px">The generated masks follow the clinical profile, and the held-out patients give the same picture as validation. The masks are plausible but a little blobby. The myocardium is the hardest part, because the wall is thin. Stage 1 is trained on ACDC only, and the check on M&amp;Ms is still to do.</p>
 
   <h3>Stage 1, rebuilt on the 14 classification features</h3>
   <p>Following the direction agreed on 15 October, the mask is now generated from the 14 features used in the ACDC classification task (Wolterink et al.): height, weight, LV, RV and myocardium volume at ED and ES, LV and RV ejection fraction, and the RV/LV and myocardium/LV volume ratios at ED and ES. All of them are calculated from the masks (pixel count times voxel volume), and they match the earlier audit values (correlation 0.999 or higher). Group means show that they separate the five diagnoses.</p>
@@ -414,10 +481,10 @@
     <li>The generated masks follow the requested features: a larger requested LV gives a larger generated LV. Only 10 patients were used, so these correlations are rough.</li>
     <li>The values are not yet exact. The mean error is about 53 mL for LV volume and about 15 percentage points for ejection fraction, which is a difference of two volumes.</li>
   </ul>
-  <p>The same check was then run once on the 20 test patients, with the final settings:</p>
+  <p>The same check was then run on the 20 held-out patients of the earlier split:</p>
   <div class="tablewrap">
     <table>
-      <thead><tr><th>Feature, per patient (generated vs requested), 20 test patients</th><th>Real features, correlation</th><th>Shuffled control, correlation</th><th>Mean error, real features</th></tr></thead>
+      <thead><tr><th>Feature, per patient (generated vs requested), 20 held-out patients</th><th>Real features, correlation</th><th>Shuffled control, correlation</th><th>Mean error, real features</th></tr></thead>
       <tbody>
         <tr><td>LV end-diastolic volume</td><td><strong>0.96</strong></td><td>0.32</td><td>81 mL</td></tr>
         <tr><td>LV ejection fraction</td><td><strong>0.88</strong></td><td>0.30</td><td>16 points</td></tr>
@@ -428,26 +495,26 @@
   </div>
   <p style="margin-top:14px">Per slice, the correlation between generated and real area is 0.40 (RV), 0.39 (myocardium) and 0.62 (LV), against 0.00, 0.13 and 0.19 with shuffled features.</p>
   <ul class="clean">
-    <li>On the test patients, the generated masks rank the patients correctly by LV volume, ejection fraction and the two ratios (correlation 0.86 to 0.96).</li>
+    <li>On the held-out patients, the generated masks rank the patients correctly by LV volume, ejection fraction and the two ratios (correlation 0.86 to 0.96).</li>
     <li>The absolute values are not accurate. The LV volume is too small on average (error 81 mL), which fits the missing-LV weakness described under stage 2. The ratio errors are large because the LV is the divisor, and a small or missing generated LV inflates them.</li>
     <li>The shuffled control is not clean for the myocardium/LV ratio (0.51). With 20 patients, a correlation of about 0.44 can arise by chance, so this is only slightly above chance, but it means that ratio is the least convincing.</li>
   </ul>
 
   <h3>Stage 2: generated masks into the baseline</h3>
-  <p>For each of the 355 ACDC test slices, a mask was generated from the 14 features of its patient (three noise seeds), and the baseline made an image from it. These images are compared with the real test images. The reference is the same baseline given the real masks.</p>
+  <p>For each of the 355 slices of the 20 held-out patients, a mask was generated from the 14 features of its patient (three noise seeds), and the baseline made an image from it. These images are compared with the real images of the same slices. The reference is the same baseline given the real masks.</p>
   <div class="tablewrap">
     <table>
       <thead><tr><th>Masks given to the baseline</th><th>FID</th><th>KID</th></tr></thead>
       <tbody>
         <tr><td>Real masks (reference)</td><td>166.9</td><td>0.119 &plusmn; 0.008</td></tr>
         <tr><td>Masks generated from the 14 features (mean of 3 seeds)</td><td>186.9 &plusmn; 2.8</td><td>0.138 &plusmn; 0.004</td></tr>
-        <tr><td>Floor: real train vs real test images</td><td>82.2</td><td>0.0033 &plusmn; 0.0016</td></tr>
+        <tr><td>Floor: real train vs real held-out images</td><td>82.2</td><td>0.0033 &plusmn; 0.0016</td></tr>
       </tbody>
     </table>
   </div>
   <ul class="clean" style="margin-top:14px">
     <li>Controlling the mask with clinical features costs a little image quality: FID 167 to 187, KID 0.119 to 0.138. Most of the distance to the floor comes from the baseline image model itself, since even real masks give FID 167.</li>
-    <li><strong>Known weakness.</strong> Only 68% of the generated slices contain a left-ventricle label, against 98% of the real test slices, and the mean LV area is about half of the real one (373 against 703 pixels). In many slices the model draws a solid wall without the cavity. This is the first thing to improve.</li>
+    <li><strong>Known weakness.</strong> Only 68% of the generated slices contain a left-ventricle label, against 98% of the real held-out slices, and the mean LV area is about half of the real one (373 against 703 pixels). In many slices the model draws a solid wall without the cavity. This is the first thing to improve.</li>
     <li>FID is biased upwards with few images (355 here), so KID is the more reliable of the two.</li>
   </ul>
 </section>
@@ -459,19 +526,31 @@
   <div class="next">
     <h3>Next</h3>
     <ul class="clean" style="margin:0">
-      <li>Fix the missing LV cavity in generated masks (for example a heavier LV weight in the loss), and check again on validation.</li>
-      <li>Check stage 1 on M&amp;Ms once the label mapping is agreed.</li>
-      <li>Utility (segmentation trained on synthetic data) and privacy tests.</li>
+      <li>Repeat stage 1 and stage 2 on the new 85 / 15 split, and fix the missing LV cavity in generated masks (a heavier LV weight in the loss, chosen on validation).</li>
+      <li>Add representative generated samples to this page.</li>
+      <li>Later, once the generation part is settled: the final run on the ACDC test set, the check on M&amp;Ms, and the use of the synthetic data for classification or segmentation, plus privacy tests.</li>
     </ul>
   </div>
 
   <div class="log">
 
     <details class="entry" open>
+      <summary><span class="date">23 Oct 2026</span><span class="title">Supervisor meeting 22 Oct: new split, feature maths and pipeline</span><span class="chip">Project design</span></summary>
+      <div class="body">
+        <ul class="clean">
+          <li><strong>Data split.</strong> The 100 labelled ACDC patients are now split into 85 for training and 15 for validation. The original ACDC test set stays untouched until all experiments are finished, and M&amp;Ms is an additional test set that is not used for training. All development results are reported on the validation patients.</li>
+          <li><strong>Scope.</strong> The focus is the generation of synthetic data (masks and images). Segmentation and classification are later uses of the generated data and are left out for now.</li>
+          <li><strong>Features.</strong> The 14 features from the Wolterink et al. classification paper are the condition for the mask model. Their equations and a worked example are in <a href="#features">The 14 features</a>.</li>
+          <li><strong>Pipeline.</strong> The step-by-step experimental flow is drawn in <a href="#method">How it works</a>.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="entry">
       <summary><span class="date">22 Oct 2026</span><span class="title">Stage 2: generated masks into the baseline, FID and KID</span><span class="chip">Clinical-profile conditioning</span></summary>
       <div class="body">
         <ul class="clean">
-          <li><strong>What was done.</strong> For each of the 355 ACDC test slices, a mask was generated from the 14 features of its patient, and the baseline turned it into an image. Three noise seeds, all run in one saved notebook.</li>
+          <li><strong>What was done.</strong> For each of the 355 slices of the 20 held-out patients, a mask was generated from the 14 features of its patient, and the baseline turned it into an image. Three noise seeds, all run in one saved notebook.</li>
           <li><strong>Result.</strong> FID 186.9 and KID 0.138 with generated masks, against FID 166.9 and KID 0.119 with real masks, and a floor of 82.2 and 0.0033. Details in <a href="#results">First results</a>.</li>
           <li><strong>Weakness found.</strong> About a third of the generated slices have no left-ventricle cavity, and the LV is about half the real size. This is the next thing to fix.</li>
         </ul>
@@ -485,7 +564,7 @@
           <li><strong>Which features.</strong> The ACDC classification papers use different numbers of features: 11 and 14 in the challenge report (Khened, Wolterink), about 20 in the Khened journal paper, and 567 radiomics features in Cetin. The 14 of Wolterink et al. were used as the starting set. No paper with 65 features was found.</li>
           <li><strong>How they are calculated.</strong> Volume is the pixel count times the voxel volume (1.5 mm &times; 1.5 mm &times; slice thickness). Ejection fraction is the ED volume minus the ES volume, divided by the ED volume. The ratios are one volume divided by another.</li>
           <li><strong>Check.</strong> The volumes match the earlier audit values (correlation 0.999 or higher, mean difference under 1 mL), and the group means follow the diagnoses (see <a href="#results">First results</a>).</li>
-          <li><strong>Stage 1 on the features.</strong> The conditional VAE now takes the 14 features, the slice position and the ED or ES phase. On validation patients the generated volumes follow the requested ones (correlation 0.62 to 0.92), and shuffled features break the link. On the 20 test patients the correlation is 0.86 to 0.96 (shuffled: 0.32 at most, except 0.51 for the myocardium/LV ratio), but the absolute values are off, mainly because the LV is too small.</li>
+          <li><strong>Stage 1 on the features.</strong> The conditional VAE now takes the 14 features, the slice position and the ED or ES phase. On validation patients the generated volumes follow the requested ones (correlation 0.62 to 0.92), and shuffled features break the link. On the 20 held-out patients the correlation is 0.86 to 0.96 (shuffled: 0.32 at most, except 0.51 for the myocardium/LV ratio), but the absolute values are off, mainly because the LV is too small.</li>
         </ul>
       </div>
     </details>
@@ -532,9 +611,9 @@
     </details>
 
     <details class="entry">
-      <summary><span class="date">15 Oct 2026</span><span class="title">Stage 1 works on the held-out test patients</span><span class="chip">Clinical-profile conditioning</span></summary>
+      <summary><span class="date">15 Oct 2026</span><span class="title">Stage 1 works on the held-out patients</span><span class="chip">Clinical-profile conditioning</span></summary>
       <div class="body">
-        <p>A first conditional VAE ignored most of the profile, because its encoder sees the real mask. A two-step version follows it: a random forest predicts the areas, and the mask generator uses them. On the 20 test patients, the correlation between generated and real areas is 0.76 (RV), 0.64 (myocardium) and 0.85 (LV), against about 0 with a shuffled profile. Numbers and the full table are in <a href="#results">First results</a>.</p>
+        <p>A first conditional VAE ignored most of the profile, because its encoder sees the real mask. A two-step version follows it: a random forest predicts the areas, and the mask generator uses them. On the 20 held-out patients, the correlation between generated and real areas is 0.76 (RV), 0.64 (myocardium) and 0.85 (LV), against about 0 with a shuffled profile. Numbers and the full table are in <a href="#results">First results</a>.</p>
       </div>
     </details>
 
