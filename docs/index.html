@@ -53,6 +53,7 @@
   h2 { font-size:1.55rem; margin:0 0 16px; letter-spacing:-.01em; display:flex; align-items:center; gap:12px; }
   h2::before { content:""; width:6px; height:1.5rem; border-radius:3px; background:linear-gradient(var(--heart),var(--accent)); flex:none; }
   h3 { font-size:1.08rem; margin:24px 0 8px; }
+  h4 { font-size:.98rem; margin:20px 0 8px; color:var(--muted); }
   p { margin:0 0 14px; }
 
   .grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
@@ -130,7 +131,7 @@
     <a href="#mnms-audit">M&amp;Ms audit</a>
     <a href="#preprocessing">Preprocessed data</a>
     <a href="#features">The 14 features</a>
-    <a href="#results">First results</a>
+    <a href="#results">Results</a>
     <a href="#progress">Progress log</a>
     <a href="#plan">Plan and status</a>
     <a href="#repo">Repository</a>
@@ -412,8 +413,76 @@
 </section>
 
 <section id="results">
-  <h2>First results</h2>
-  <div class="note"><strong>About the data split.</strong> On 22 October the split changed to 85 training and 15 validation patients, with the original ACDC test set kept untouched until the end. The numbers below were produced earlier, on a 70 / 10 / 20 split. The 20 patients called &ldquo;held-out&rdquo; below now belong to the training and validation pool, and the results will be repeated on the new split.</div>
+  <h2>Results</h2>
+
+  <h3>Results on the 85 / 15 split (current)</h3>
+  <p>These are the current results. Stage 1 and stage 2 were trained on the 85 training patients and evaluated on the 15 validation patients (254 slices). The original ACDC test set was not used. The weight of the left-ventricle class in the stage 1 loss was chosen on validation, by a rule fixed in advance: the weight whose mean generated LV area is closest to the real one. Single run, 15 patients, so small differences are not meaningful.</p>
+
+  <h4>Fixing the missing left ventricle</h4>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>LV weight in the loss</th><th>Slices with LV (real 99%)</th><th>LV area, gen. / real</th><th>Per-slice LV r</th><th>LV volume error (mL)</th><th>EF r</th></tr></thead>
+      <tbody>
+        <tr><td>2 (before)</td><td>72%</td><td>0.49</td><td>0.38</td><td>79.8</td><td>&minus;0.01</td></tr>
+        <tr><td><strong>5 (chosen)</strong></td><td><strong>89%</strong></td><td><strong>0.87</strong></td><td><strong>0.67</strong></td><td><strong>47.3</strong></td><td>0.26</td></tr>
+        <tr><td>10</td><td>93%</td><td>0.81</td><td>0.56</td><td>46.2</td><td>0.35</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:14px">A heavier LV weight largely removes the missing-cavity problem. The ejection fraction is still weakly controlled.</p>
+
+  <h4>Do the features steer the masks?</h4>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Per-slice area, correlation with the real slice</th><th>RV</th><th>Myocardium</th><th>LV</th></tr></thead>
+      <tbody>
+        <tr><td>Matched features</td><td>0.31</td><td>0.52</td><td>0.67</td></tr>
+        <tr><td>Shuffled features (control)</td><td>0.01</td><td>0.13</td><td>0.46</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="tablewrap" style="margin-top:14px">
+    <table>
+      <thead><tr><th>Per patient (15), generated vs requested</th><th>Correlation</th><th>Mean error</th></tr></thead>
+      <tbody>
+        <tr><td>LV volume at ED</td><td>0.94</td><td>47 mL</td></tr>
+        <tr><td>LV ejection fraction</td><td>0.26</td><td>21 points</td></tr>
+        <tr><td>RV/LV volume ratio at ED</td><td>0.78</td><td>1.02</td></tr>
+        <tr><td>Myocardium/LV volume ratio at ED</td><td>0.83</td><td>0.91</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul class="clean" style="margin-top:14px">
+    <li>Swapping the features between patients lowers the agreement for every structure, so the model does use the clinical profile and not only the slice position.</li>
+    <li>The volumes and the two ratios follow the request. The absolute errors are large, and the ejection fraction is only weakly controlled. It is the difference of two volumes, so small errors add up.</li>
+  </ul>
+
+  <h4>Stage 2: generated masks into the baseline</h4>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Masks given to the baseline</th><th>FID</th><th>KID</th></tr></thead>
+      <tbody>
+        <tr><td>Real masks (reference)</td><td>189.5</td><td>0.122 &plusmn; 0.007</td></tr>
+        <tr><td>Masks generated from the 14 features (mean of 3 seeds)</td><td>200.4 &plusmn; 0.8</td><td>0.135 &plusmn; 0.002</td></tr>
+        <tr><td>Floor: real train vs real validation images</td><td>99.0</td><td>0.005 &plusmn; 0.002</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul class="clean" style="margin-top:14px">
+    <li>Generated masks cost about 11 FID points (6%) compared with real masks. Most of the distance to the floor comes from the baseline image model, since even real masks give FID 189.5. This is the reason to try a diffusion or flow image model next.</li>
+    <li>Generated masks against real validation masks: LV present in 89% of slices (real 99%), mean LV area 585 against 676 pixels. The myocardium is a little too large (755 against 668 pixels), and an RV is drawn in 94% of slices, against 82% in the real masks.</li>
+    <li><strong>Caveat.</strong> The baseline image model was trained on the earlier split, and some of the 15 validation patients were probably among its training patients. The absolute FID and KID are therefore not clean. The comparison between real and generated masks stays fair. The baseline will be retrained on the 85 training patients only.</li>
+    <li>FID is biased upwards with few images (254 here), so KID is the more reliable of the two.</li>
+  </ul>
+
+  <h4>Samples</h4>
+  <figure>
+    <a href="assets/samples_val.png" target="_blank" rel="noopener"><img src="assets/samples_val.png" alt="Four rows by five columns, one column per diagnosis group (DCM, HCM, MINF, NOR, RV). Rows: real mask, mask generated from the 14 features, image generated from the generated mask, real image."></a>
+    <figcaption>One validation patient per diagnosis group, middle slice at end-diastole. The patient and slice were chosen by a fixed rule (first validation patient of each group), not by quality, so failures are shown too. NOR and MINF look plausible, and RV is rough. In DCM the generated mask is broken (a detached myocardium fragment and no RV), and in HCM only a small myocardium fragment appears. Colours: RV blue, myocardium yellow, LV red. Click the image to open it full size.</figcaption>
+  </figure>
+
+  <h3>Earlier results (70 / 10 / 20 split)</h3>
+  <div class="note"><strong>About the data split.</strong> On 22 October the split changed to 85 training and 15 validation patients, with the original ACDC test set kept untouched until the end. The first results further down were produced earlier, on a 70 / 10 / 20 split. The 20 patients called &ldquo;held-out&rdquo; there now belong to the training and validation pool. They are kept for comparison, and the current results are in the section above.</div>
   <p style="margin-top:14px">Early results from single runs, so no averages over seeds yet. The conditioned model has two stages: clinical information becomes a segmentation mask (stage 1), and the mask becomes an image with the baseline (stage 2). Stage 1 was first built on a diagnosis-and-measurements profile, then rebuilt on the 12 to 14 classification features agreed with the supervisors.</p>
 
   <h3>Baseline: mask to image</h3>
@@ -526,8 +595,8 @@
   <div class="next">
     <h3>Next</h3>
     <ul class="clean" style="margin:0">
-      <li>Repeat stage 1 and stage 2 on the new 85 / 15 split, and fix the missing LV cavity in generated masks (a heavier LV weight in the loss, chosen on validation).</li>
-      <li>Add representative generated samples to this page.</li>
+      <li>Retrain the baseline image model on the 85 training patients only, and improve the masks that still fail (the DCM and HCM samples, the myocardium that is too thick, the RV drawn too often).</li>
+      <li>Try a diffusion or flow model for the image stage, since the baseline sets most of the FID.</li>
       <li>Later, once the generation part is settled: the final run on the ACDC test set, the check on M&amp;Ms, and the use of the synthetic data for classification or segmentation, plus privacy tests.</li>
     </ul>
   </div>
@@ -535,6 +604,18 @@
   <div class="log">
 
     <details class="entry" open>
+      <summary><span class="date">27 Oct 2026</span><span class="title">New 85 / 15 split: LV fix and stage 2 re-run</span><span class="chip">Clinical-profile conditioning</span></summary>
+      <div class="body">
+        <ul class="clean">
+          <li><strong>What was done.</strong> Stage 1 and stage 2 were re-run on the 85 / 15 split in one saved notebook. Three LV weights (2, 5, 10) were compared on validation, and 5 was chosen by a rule fixed in advance.</li>
+          <li><strong>Result.</strong> Slices with an LV rose from 72% to 89% (real 99%), and the generated LV area from 0.49 to 0.87 of the real one. With generated masks, FID is 200.4 and KID 0.135, against 189.5 and 0.122 with real masks.</li>
+          <li><strong>Still weak.</strong> Ejection fraction control (correlation 0.26), and some masks fail completely (see the samples). The baseline was trained on the earlier split, so the absolute FID is not clean yet.</li>
+          <li>Details in <a href="#results">Results</a>.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="entry">
       <summary><span class="date">23 Oct 2026</span><span class="title">Supervisor meeting 22 Oct: new split, feature maths and pipeline</span><span class="chip">Project design</span></summary>
       <div class="body">
         <ul class="clean">
@@ -646,7 +727,7 @@
         <tr><td>Project proposal and literature review draft</td><td>Aug to Sep 2026</td><td class="status-done">Done</td></tr>
         <tr><td>Dataset investigation and project design</td><td>Sep to early Nov 2026</td><td class="status-done">Done</td></tr>
         <tr><td>Baseline development</td><td>Oct to early Nov 2026</td><td class="status-done">Done (first version)</td></tr>
-        <tr><td>Clinical-profile conditioning and first evaluation</td><td>Nov to Dec 2026</td><td class="status-now">In progress (both stages built, LV weakness to fix)</td></tr>
+        <tr><td>Clinical-profile conditioning and first evaluation</td><td>Nov to Dec 2026</td><td class="status-now">In progress (both stages built and re-run on the 85 / 15 split, LV fix done)</td></tr>
         <tr><td>Full evaluation: fidelity, utility, privacy</td><td>Jan to Mar 2027</td><td class="status-next">Planned</td></tr>
         <tr><td>Comparative analysis and thesis writing</td><td>Apr to May 2027</td><td class="status-next">Planned</td></tr>
         <tr><td>Thesis submission and presentation</td><td>May to June 2027</td><td class="status-next">Planned</td></tr>
