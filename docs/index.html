@@ -469,9 +469,9 @@
     </table>
   </div>
   <ul class="clean" style="margin-top:14px">
-    <li>Generated masks cost about 11 FID points (6%) compared with real masks. Most of the distance to the floor comes from the baseline image model, since even real masks give FID 189.5. This is the reason to try a diffusion or flow image model next.</li>
+    <li>Generated masks cost about 11 FID points (6%) compared with real masks. Most of the distance to the floor comes from the baseline image model, since even real masks give FID 189.5. This is why a flow image model was tried (next block), and it lowers FID to about 119.</li>
     <li>Generated masks against real validation masks: LV present in 89% of slices (real 99%), mean LV area 585 against 676 pixels. The myocardium is a little too large (755 against 668 pixels), and an RV is drawn in 94% of slices, against 82% in the real masks.</li>
-    <li><strong>Note:</strong> The baseline image model was trained on 70 patients of the earlier split. The 15 validation patients come from the earlier validation and test patients, so the baseline has not seen any of them and the numbers above are clean. It will still be retrained on all 85 training patients.</li>
+    <li><strong>Note.</strong> The baseline image model was trained on 70 patients of the earlier split. The 15 validation patients come from the earlier validation and test patients, so the baseline has not seen any of them and the numbers above are clean. It will still be retrained on all 85 training patients.</li>
     <li>FID is biased upwards with few images (254 here), so KID is the more reliable of the two.</li>
   </ul>
 
@@ -479,6 +479,33 @@
   <figure>
     <a href="assets/samples_val.png" target="_blank" rel="noopener"><img src="assets/samples_val.png" alt="Four rows by five columns, one column per diagnosis group (DCM, HCM, MINF, NOR, RV). Rows: real mask, mask generated from the 14 features, image generated from the generated mask, real image."></a>
     <figcaption>One validation patient per diagnosis group, middle slice at end-diastole. The patient and slice were chosen by a fixed rule (first validation patient of each group), not by quality, so failures are shown too. NOR and MINF look plausible, and RV is rough. In DCM the generated mask is broken (a detached myocardium fragment and no RV), and in HCM only a small myocardium fragment appears. Colours: RV blue, myocardium yellow, LV red. Click the image to open it full size.</figcaption>
+  </figure>
+
+  <h4>Image model v2: mask-conditioned flow matching</h4>
+  <p>The baseline GAN limits the image quality, so a second image model was trained: a U-Net that turns noise into an image in 50 steps (flow matching, a diffusion-style method), with the mask given to every layer. It was trained on the 85 training patients only for 16,000 steps (24.7 million parameters) and scored on the same 15 validation patients with the same FID and KID code.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Image model</th><th>Masks given</th><th>FID</th><th>KID</th></tr></thead>
+      <tbody>
+        <tr><td>SPADE GAN (baseline)</td><td>real</td><td>189.5</td><td>0.122 &plusmn; 0.007</td></tr>
+        <tr><td>SPADE GAN (baseline)</td><td>generated from the 14 features</td><td>200.4 &plusmn; 0.8</td><td>0.135 &plusmn; 0.002</td></tr>
+        <tr><td><strong>Flow model, guidance 2</strong></td><td>real</td><td><strong>118.8</strong></td><td><strong>0.040 &plusmn; 0.005</strong></td></tr>
+        <tr><td><strong>Flow model, guidance 2</strong></td><td>generated from the 14 features</td><td><strong>118.9</strong></td><td><strong>0.038 &plusmn; 0.004</strong></td></tr>
+        <tr><td>Flow model, no guidance</td><td>real</td><td>129.3</td><td>0.056 &plusmn; 0.006</td></tr>
+        <tr><td>Flow model, no guidance</td><td>generated from the 14 features</td><td>126.7</td><td>0.049 &plusmn; 0.005</td></tr>
+        <tr><td>Floor: real train vs real validation images</td><td>&ndash;</td><td>99.0</td><td>0.005 &plusmn; 0.002</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul class="clean" style="margin-top:14px">
+    <li>FID falls from 189.5 to 118.8 and KID from 0.122 to 0.040 with real masks. With generated masks the fall is from 200.4 to 118.9. The flow model is about 20 FID points above the floor, against 90 for the GAN.</li>
+    <li>With the flow model, generated masks cost almost nothing in image quality (118.9 against 118.8). This is one set of generated masks, so it is not a precise comparison.</li>
+    <li>Guidance (the image follows the mask more strictly) helps: scale 2 gives a lower FID than no guidance. Both settings are shown. The scale was compared on the validation patients, so the best value is slightly optimistic.</li>
+    <li>Single training run and 15 validation patients, so the numbers can move in a repeat. The training loss was still falling at the end. With only 1,587 training slices, a model can start to memorise, which the planned nearest-neighbour privacy test will check.</li>
+  </ul>
+  <figure>
+    <a href="assets/samples_flow.png" target="_blank" rel="noopener"><img src="assets/samples_flow.png" alt="Five rows by five columns, one column per diagnosis group. Rows: real mask, image from the real mask, mask generated from the 14 features, image from the generated mask, real image."></a>
+    <figcaption>Flow model, same validation patients and slices as above (first validation patient of each group, middle ED slice, chosen by a fixed rule). The images look like cardiac MR slices, with a clear myocardium wall. Errors of the mask carry over to the image: in DCM and HCM the generated mask is broken, and so is the image made from it. Click the image to open it full size.</figcaption>
   </figure>
 
   <h3>Earlier results (70 / 10 / 20 split)</h3>
@@ -595,8 +622,8 @@
   <div class="next">
     <h3>Next</h3>
     <ul class="clean" style="margin:0">
-      <li>Retrain the baseline image model on all 85 training patients, and improve the masks that still fail (the DCM and HCM samples, the myocardium that is too thick, the RV drawn too often).</li>
-      <li>Try a diffusion or flow model for the image stage, since the baseline sets most of the FID.</li>
+      <li>Make the flow-model result solid: repeat with other random seeds, check that it does not memorise training images (nearest-neighbour distance), and retrain the GAN on all 85 patients for a fair comparison.</li>
+      <li>Improve the masks that still fail (the DCM and HCM samples, the myocardium that is too thick, the RV drawn too often), since mask errors now carry over to the image.</li>
       <li>Later, once the generation part is settled: the final run on the ACDC test set, the check on M&amp;Ms, and the use of the synthetic data for classification or segmentation, plus privacy tests.</li>
     </ul>
   </div>
@@ -604,6 +631,18 @@
   <div class="log">
 
     <details class="entry" open>
+      <summary><span class="date">29 Oct 2026</span><span class="title">Better image quality: flow-matching image model</span><span class="chip">Clinical-profile conditioning</span></summary>
+      <div class="body">
+        <ul class="clean">
+          <li><strong>What was done.</strong> A mask-conditioned flow-matching model (U-Net, 50 sampling steps, mask given to every layer, classifier-free guidance) was trained on the 85 training patients in a separate notebook, and scored on the 15 validation patients with the same FID and KID code as the GAN.</li>
+          <li><strong>Result.</strong> FID 118.8 and KID 0.040 with real masks, against 189.5 and 0.122 for the GAN. With masks generated from the 14 features, FID 118.9 and KID 0.038, against 200.4 and 0.135. The floor is 99.0.</li>
+          <li><strong>Caution.</strong> One training run, 15 validation patients, and the guidance scale was compared on the same patients. Memorisation has not been checked yet.</li>
+          <li>Details and samples in <a href="#results">Results</a>.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="entry">
       <summary><span class="date">27 Oct 2026</span><span class="title">New 85 / 15 split: LV fix and stage 2 re-run</span><span class="chip">Clinical-profile conditioning</span></summary>
       <div class="body">
         <ul class="clean">
@@ -727,7 +766,7 @@
         <tr><td>Project proposal and literature review draft</td><td>Aug to Sep 2026</td><td class="status-done">Done</td></tr>
         <tr><td>Dataset investigation and project design</td><td>Sep to early Nov 2026</td><td class="status-done">Done</td></tr>
         <tr><td>Baseline development</td><td>Oct to early Nov 2026</td><td class="status-done">Done (first version)</td></tr>
-        <tr><td>Clinical-profile conditioning and first evaluation</td><td>Nov to Dec 2026</td><td class="status-now">In progress (both stages built and re-run on the 85 / 15 split, LV fix done)</td></tr>
+        <tr><td>Clinical-profile conditioning and first evaluation</td><td>Nov to Dec 2026</td><td class="status-now">In progress (both stages built and re-run on the 85 / 15 split, LV fix done, flow image model first run done)</td></tr>
         <tr><td>Full evaluation: fidelity, utility, privacy</td><td>Jan to Mar 2027</td><td class="status-next">Planned</td></tr>
         <tr><td>Comparative analysis and thesis writing</td><td>Apr to May 2027</td><td class="status-next">Planned</td></tr>
         <tr><td>Thesis submission and presentation</td><td>May to June 2027</td><td class="status-next">Planned</td></tr>
