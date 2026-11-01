@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Clinical-Profile-Conditioned Synthetic Cardiac MRI Generation Using Deep Generative Models</title>
-<meta name="description" content="Master's thesis project on generating synthetic cardiac MR images and segmentation masks guided by a patient's clinical profile.">
+<title>Clinical-Profile-Conditioned Synthetic Cardiac MRI Generation</title>
+<meta name="description" content="Master's thesis project: generating synthetic cardiac MR images and masks from a patient's clinical profile, with a two-stage pipeline (conditional VAE, then GAN or flow matching).">
 <style>
   :root {
     --bg:#fbfdff; --fg:#14202b; --muted:#566370; --line:#d9e6f0;
@@ -102,63 +102,147 @@
   code { background:var(--accent-soft); color:var(--accent); padding:2px 7px; border-radius:6px; font-size:13.5px; }
   footer { margin-top:64px; padding:28px 0 44px; border-top:1px solid var(--line); color:var(--muted); font-size:14px; }
   @media (max-width:600px){ header.hero{padding-top:44px} main section{padding-top:40px} th,td{padding:8px 10px} }
+
+  /* overview page */
+  .tags { display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 0; }
+  .tags span { font-size:13px; padding:4px 12px; border-radius:999px; background:var(--hero-chip); border:1px solid var(--hero-chip-line); color:var(--hero-fg); }
+  .btns { display:flex; flex-wrap:wrap; gap:12px; margin:26px 0 0; }
+  .btn { display:inline-block; text-decoration:none; font-weight:650; padding:10px 20px; border-radius:10px; border:1px solid var(--accent); color:var(--accent); background:transparent; }
+  .btn.primary { background:var(--accent); color:#fff; }
+  @media (prefers-color-scheme: dark) { .btn.primary { color:#0c141c; } }
+  .secno { font-size:13px; font-weight:700; letter-spacing:.08em; color:var(--heart); margin-bottom:4px; }
+  .callouts { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); margin:22px 0 6px; }
+  .callout { background:var(--card); border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:12px; padding:14px 18px; box-shadow:var(--shadow); }
+  .callout b { display:block; font-size:1.55rem; line-height:1.15; }
+  .callout span { font-size:13.5px; color:var(--muted); }
+  .tabs { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 14px; }
+  .tabs button { font:inherit; font-size:14.5px; cursor:pointer; padding:8px 16px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--fg); }
+  .tabs button[aria-selected="true"] { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:650; }
+  @media (prefers-color-scheme: dark) { .tabs button[aria-selected="true"] { color:#0c141c; } }
+  .panel[hidden] { display:none; }
+  .evalgrid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
+  .stat-chip { display:inline-block; font-size:12px; padding:2px 10px; border-radius:999px; margin-bottom:8px; font-weight:650; }
+  .stat-chip.done { background:#dcfce7; color:#15803d; } .stat-chip.plan { background:var(--band); color:var(--muted); border:1px solid var(--line); }
+  @media (prefers-color-scheme: dark) { .stat-chip.done { background:#12331f; color:#4ade80; } }
+  td.best { font-weight:700; color:var(--accent); background:var(--accent-soft) !important; }
+  .findings { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); margin-top:20px; }
+  .finding { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--heart); border-radius:12px; padding:16px 20px; box-shadow:var(--shadow); }
+  .finding .n { font-weight:700; color:var(--heart); font-size:13px; letter-spacing:.06em; }
+  .finding h3 { margin:2px 0 6px; }
+  .finding p { margin:0; font-size:15px; }
+  .people { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
+  .person { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; box-shadow:var(--shadow); text-align:center; }
+  .avatar { width:64px; height:64px; border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.2rem; color:#fff; background:linear-gradient(135deg,var(--heart),var(--accent)); }
+  .person b { display:block; } .person span { font-size:14px; color:var(--muted); }
+  .linkcards { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+  .linkcards a { display:block; text-decoration:none; color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 18px; box-shadow:var(--shadow); }
+  .linkcards a:hover { border-color:var(--accent); }
+  .linkcards b { display:block; color:var(--accent); } .linkcards span { font-size:14px; color:var(--muted); }
+
+  /* merged page */
+  details.fold { background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); margin:16px 0; }
+  details.fold > summary { cursor:pointer; list-style:none; padding:14px 18px; display:flex; flex-wrap:wrap; gap:4px 14px; align-items:baseline; }
+  details.fold > summary::-webkit-details-marker { display:none; }
+  details.fold > summary::before { content:"+"; font-weight:700; color:var(--accent); width:1em; flex:none; }
+  details.fold[open] > summary::before { content:"\2212"; }
+  details.fold .ft { font-weight:650; }
+  details.fold .fs { font-size:13.5px; color:var(--muted); }
+  details.fold .fbody { padding:0 20px 12px; border-top:1px solid var(--line); }
+  details.fold .fbody > h4:first-child, details.fold .fbody > h3:first-child { margin-top:18px; }
+  .qa { display:grid; gap:14px; margin:18px 0; }
+  .qa .q { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:12px; padding:14px 20px; box-shadow:var(--shadow); }
+  .qa .q h3 { margin:0 0 6px; font-size:1rem; }
+  .qa .q p { margin:0 0 8px; font-size:15px; } .qa .q p:last-child { margin-bottom:0; }
+  nav a.back { margin-left:auto; }
 </style>
 </head>
 <body>
 
 <header class="hero">
   <div class="wrap">
-    <span class="badge">Work in progress &middot; baseline done, conditioned model built end to end, autumn 2026</span>
+    <span class="badge">Master's thesis &middot; Medical imaging &middot; 2026 &middot; work in progress</span>
     <h1>Clinical-Profile-Conditioned Synthetic Cardiac MRI Generation Using Deep Generative Models</h1>
-    <p class="sub">A master's thesis project at the University of South-Eastern Norway, in collaboration with Simula Research Laboratory. The aim is to generate synthetic cardiac MR images and their segmentation masks that are guided by a patient's clinical profile, and to test whether that guidance is real, useful and safe. The thesis extends the CBMS pipeline so that synthetic cardiac MRI can be generated for a given clinical profile, such as diagnosis group, height and weight, and evaluated with the same fidelity, utility and privacy framework. The proposal and research questions have been approved by the supervisors. The datasets are prepared, a mask-to-image baseline has been built and evaluated, and the conditioned model now runs end to end: clinical features become a mask, and the mask becomes an image. First results are in, with one known weakness (see First results).</p>
+    <p class="sub">Generating synthetic cardiac MR images that are guided by a patient's clinical profile, with a two-stage pipeline: clinical features and noise make a mask, and the mask makes the image. A GAN and a diffusion-style flow matching model are compared for the image stage.</p>
+    <div class="tags"><span>Cardiac MRI</span><span>ACDC</span><span>M&amp;Ms</span><span>Conditional VAE</span><span>SPADE GAN</span><span>Flow matching</span><span>Clinical features</span></div>
+    <div class="btns"><a class="btn primary" href="#summary">Read summary</a><a class="btn" href="#results">View results</a><a class="btn" href="#questions">Research questions</a></div>
     <div class="stats">
-      <a class="stat" href="#acdc-audit"><b>100</b><span>ACDC patients audited</span></a>
-      <a class="stat" href="#mnms-audit"><b>345</b><span>M&amp;Ms cases audited</span></a>
-      <a class="stat" href="#acdc-audit"><b>5</b><span>ACDC diagnosis groups</span></a>
-      <a class="stat" href="#questions"><b>3</b><span>research questions</span></a>
+      <a class="stat" href="#summary"><b>14</b><span>clinical features as the condition</span></a>
+      <a class="stat" href="#approach"><b>2</b><span>stages: mask, then image</span></a>
+      <a class="stat" href="#results"><b>189 &rarr; 119</b><span>FID, GAN to flow matching (validation)</span></a>
+      <a class="stat" href="#results"><b>85 / 15</b><span>training and validation patients</span></a>
     </div>
   </div>
 </header>
 
 <nav>
   <div class="wrap">
-    <a href="#idea">The idea</a>
-    <a href="#questions">Objective and questions</a>
-    <a href="#method">How it works</a>
-    <a href="#literature">Literature</a>
-    <a href="#datasets">Datasets</a>
-    <a href="#acdc-audit">ACDC audit</a>
-    <a href="#mnms-audit">M&amp;Ms audit</a>
-    <a href="#preprocessing">Preprocessed data</a>
-    <a href="#features">The 14 features</a>
+    <a href="#summary">Summary</a>
+    <a href="#questions">Questions</a>
+    <a href="#approach">Approach</a>
+    <a href="#data">Data</a>
+    <a href="#features">Features</a>
+    <a href="#models">Models</a>
     <a href="#results">Results</a>
-    <a href="#progress">Progress log</a>
-    <a href="#plan">Plan and status</a>
-    <a href="#repo">Repository</a>
+    <a href="#literature">Literature</a>
+    <a href="#progress">Progress</a>
+    <a href="#glossary">Glossary</a>
+    <a href="#team">Team</a>
   </div>
 </nav>
 
 <main class="wrap">
 
-<section id="idea">
-  <h2>The idea in plain words</h2>
+<section id="summary">
+  <div class="secno">01</div><h2>Summary</h2>
+
+  <p>Deep learning for cardiac MRI needs a lot of labelled data, but scans are scarce, differ between scanners and are protected by privacy rules. Generative models can create extra synthetic scans. Most existing work controls only the <em>anatomy</em> of the generated heart, for example with a segmentation mask. This project asks whether the generation can instead be controlled by <em>information about the patient</em>, so that synthetic data can be shaped towards the patient groups a dataset is missing.</p>
+  <p>The approach is a two-stage pipeline. In stage 1, 14 clinical features (height, weight, chamber volumes, ejection fractions and volume ratios) and random noise are turned into a synthetic segmentation mask by a conditional VAE. In stage 2, that mask and noise are turned into a synthetic cardiac MR image, and two model families are compared: a SPADE GAN (the baseline) and a flow matching model. The results are checked for image fidelity and for whether the clinical features really steer the output. Utility for downstream models and privacy tests follow. The first results are on ACDC, with 85 training and 15 validation patients, and the test sets are kept untouched until the end.</p>
+  <div class="callouts">
+    <div class="callout"><b>2 stages</b><span>mask generation, then image generation</span></div>
+    <div class="callout"><b>2 image models</b><span>SPADE GAN and flow matching</span></div>
+    <div class="callout"><b>3 checks</b><span>fidelity, conditioning, then utility and privacy</span></div>
+    <div class="callout"><b>1 framework</b><span>same split and metrics for every model</span></div>
+  </div>
+
   <p>Deep learning models for cardiac MRI need a lot of labelled data, and that data is hard to get. Scans differ between scanners and hospitals, expert labelling is slow, and privacy rules limit sharing. Some patient groups and conditions also appear only a handful of times.</p>
   <p>Generative models can create extra synthetic scans. Most existing work controls the <em>anatomy</em> of the generated heart, for example with a segmentation mask. This project asks what happens when the generation is controlled by <em>information about the patient</em>, such as diagnosis group, body measurements or other clinical details, so the synthetic data can be shaped towards the groups a dataset is missing.</p>
   <div class="note"><strong>Scope.</strong> This is a methods and data project. It does not involve clinicians, patient outcomes or clinical deployment, and it makes no claim about clinical impact.</div>
+
 </section>
 
 <section id="questions">
-  <h2>Objective and research questions</h2>
+  <div class="secno">02</div><h2>Objectives, research questions and answers</h2>
+
   <p><strong>Main objective.</strong> Investigate how clinical-profile information can give fine-grained control over the generation of synthetic cardiac MR images together with their segmentation masks.</p>
   <div class="grid">
     <div class="card"><h3><span class="tag">O1 / RQ1</span> Build it</h3><p>Develop a baseline generative model without clinical-profile conditioning, and a conditioned version built on top of it. How can the profile be put into the model?</p></div>
     <div class="card"><h3><span class="tag">O2 / RQ2</span> Check it works</h3><p>Do the generated images and masks keep plausible anatomy, and do they actually reflect the profile they were conditioned on?</p></div>
     <div class="card"><h3><span class="tag">O3 / RQ3</span> Compare it</h3><p>How does the conditioned model compare with the baseline on fidelity, downstream utility and privacy?</p></div>
   </div>
+<h3>Where each research question stands</h3>
+  <p style="display:none"><strong>Main objective.</strong> Investigate how clinical-profile information can give fine-grained control over the generation of synthetic cardiac MR images together with their segmentation masks.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Research question</th><th>Status</th><th>What answers it so far</th></tr></thead>
+    <tbody>
+      <tr><td><strong>RQ1.1</strong> What clinical information is available and suitable for conditioning?</td><td class="status-done">Answered</td><td>Both datasets audited. ACDC has diagnosis, height and weight; M&amp;Ms adds age and sex. The 14 classification features, calculated from the masks, were chosen as the condition (<a href="#features">The 14 features</a>).</td></tr>
+      <tr><td><strong>RQ1.2</strong> How can it be incorporated into generating images and masks?</td><td class="status-done">First version built</td><td>A two-stage pipeline: features and noise make a mask (conditional VAE), and the mask makes the image (GAN or flow matching).</td></tr>
+      <tr><td><strong>RQ2.1</strong> Do the generated images and masks keep plausible anatomy?</td><td class="status-now">Partly</td><td>Checked by eye and by the share of slices with a left ventricle (89%, real 99%). Some masks still fail. Systematic anatomy checks are still to add.</td></tr>
+      <tr><td><strong>RQ2.2</strong> Do they reflect the clinical profile used for conditioning?</td><td class="status-done">Measured</td><td>Matched against shuffled features: LV volume and the ratios follow the request, ejection fraction only weakly (see Results).</td></tr>
+      <tr><td><strong>RQ3.1</strong> Effect of conditioning on fidelity and anatomical consistency, against a baseline without it</td><td class="status-now">Partly</td><td>Fidelity is measured (FID, KID) with real masks and with generated masks. A baseline mask generator <em>without</em> the clinical profile is not built yet, so the full comparison is still open.</td></tr>
+      <tr><td><strong>RQ3.2</strong> Effect on downstream utility</td><td class="status-next">Planned</td><td>Segmentation or classification trained on real, synthetic and combined data.</td></tr>
+      <tr><td><strong>RQ3.3</strong> Effect on privacy</td><td class="status-next">Planned</td><td>Nearest-neighbour distance and membership-inference tests.</td></tr>
+    </tbody>
+  </table></div>
+
+<div class="qa">
+  <div class="q"><h3>What did the proposal ask?</h3><p>Can a patient's clinical profile give fine-grained control over synthetic cardiac MR images and their masks, and is the result faithful, useful and private? The proposal splits this into three objectives (build, check, compare) with seven sub-questions.</p></div>
+  <div class="q"><h3>What is the short answer so far?</h3><p><strong>Build:</strong> yes, a two-stage pipeline works end to end (14 features and noise, then a mask, then an image). <strong>Check:</strong> the profile does steer the masks (matched features beat shuffled ones), but ejection fraction is only weakly controlled and some masks fail. <strong>Compare:</strong> flow matching is clearly better than the GAN for the image stage (FID 189 to 119). The comparison with a baseline <em>without</em> clinical conditioning, utility and privacy are still to do.</p></div>
+</div>
 </section>
 
-<section id="method">
-  <h2>How it works</h2>
+<section id="approach">
+  <div class="secno">03</div><h2>Approach and pipeline</h2>
+
   <p>The work follows Design Science Research. A baseline pipeline is built first, then the clinical-profile-conditioned approach is added on top of it, so any difference can be traced to the conditioning itself.</p>
   <div class="figrow">
     <figure>
@@ -180,7 +264,12 @@
     <a href="assets/pipeline_diagram.png" target="_blank" rel="noopener"><img src="assets/pipeline_diagram.png" alt="Pipeline diagram: data split into 85 training and 15 validation patients, the 14 features calculated from the masks, stage 1 features to mask, stage 2 mask to image, checks on validation, experiments A, B and C, and the test sets kept untouched until the end."></a>
     <figcaption>Step-by-step experimental flow. Green: built. Orange: in progress. Grey: planned. Red: untouched until the final stage. Click the image to open it full size.</figcaption>
   </figure>
-  <h3>How the results will be judged</h3>
+  <h3>The two-step generator</h3>
+  <figure>
+    <a href="assets/architecture_two_step.png" target="_blank" rel="noopener"><img src="assets/architecture_two_step.png" alt="Two-step generator: 14 clinical features and noise go into a conditional VAE that makes a synthetic mask; the mask and a noise image go into a flow model that makes a synthetic CMR image. Real and synthetic data are tagged."></a>
+    <figcaption>Step 1 turns the 14 features and noise into a synthetic mask. Step 2 turns that mask and noise into a synthetic CMR image. The tags show what is real patient data and what is generated. Click the image to open it full size.</figcaption>
+  </figure>
+  <h3>How the results are judged</h3>
   <ul class="clean">
     <li><strong>Did the conditioning work?</strong> Measure the generated masks and images and compare with the values requested.</li>
     <li><strong>Fidelity.</strong> How close the synthetic images are to real ones (for example FID, KID, SSIM, LPIPS).</li>
@@ -191,33 +280,43 @@
     <img src="assets/research_workflow.png" alt="Research workflow linking motivation, research gap, the three research questions and the final analysis">
     <figcaption>Overall research workflow: from motivation and gap, through the three research questions, to the final analysis and comparison.</figcaption>
   </figure>
-</section>
-
-<section id="literature">
-  <h2>What the literature says so far</h2>
-  <p>A focused review of cardiac MRI generators that use patient-level information found a small, varied set of papers. Each conditions on something different, and few check the result in the same way.</p>
-  <div class="tablewrap">
-    <table>
-      <thead><tr><th>Paper</th><th>Conditions on</th><th>Data</th><th>Checked?</th><th>Main finding</th><th>Why it matters here</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Campello et al.</strong> 2022</td><td>Age, BMI</td><td>UK Biobank; four-chamber, end-diastole, 2D</td><td>Conditioning: <strong>yes</strong> (age and BMI regressor)<br>Privacy: no</td><td>Adding 10 to 25% synthetic scans brought age-prediction error close to a balanced dataset.</td><td>Template for checking that conditioning worked, using an independent regressor.</td></tr>
-        <tr><td><strong>Skorupko et al.</strong> 2025</td><td>Sex, age, BMI, health condition (text) plus masks</td><td>UK Biobank</td><td>Conditioning: partly<br>Privacy: argued, not tested</td><td>Reduced imbalance, for example scarce diagnosed female patients, in a downstream classifier.</td><td>Conditions on profile plus mask. Add a direct conditioning check and a privacy test.</td></tr>
-        <tr><td><strong>Li et al.</strong> 2025 (CPGG)</td><td>Cardiac phenotypes (such as LVEF and LVEDV)</td><td>UK Biobank and a private set</td><td>Conditioning: not stated<br>Privacy: not stated</td><td>Pretraining on the synthetic data improved diagnosis and phenotype prediction.</td><td>Shows clinical characteristics can condition cine CMR.</td></tr>
-        <tr><td><strong>Cao et al.</strong> 2026</td><td>Diagnosis, chamber volumes, ejection fraction</td><td>Trained on ACDC and Data Science Bowl; tested on M&amp;Ms and M&amp;Ms-2</td><td>Conditioning: <strong>yes</strong> (r 0.66 to 0.94)<br>Privacy: no</td><td>FID 72.2. Synthetic data raised cross-vendor Dice by 1.4% and cut Hausdorff distance by 3.0 mm (nnU-Net).</td><td><strong>Closest to thesis.</strong> Adding a no-conditioning baseline and a privacy test.</td></tr>
-        <tr><td><strong>Rodr&iacute;guez et al.</strong> 2026</td><td>Structured metadata and slice position, as text</td><td>UK Biobank, 59,058 short-axis images</td><td>Conditioning: <strong>yes</strong> (subgroup alignment)<br>Privacy: not addressed</td><td>FID 37.5, 28.7% better than the earlier text-conditioned baseline that needs mask geometry. Disease-specific conditioning was the hardest task.</td><td>Newest metadata-conditioned CMR work (August 2026). Shows the area is moving fast.</td></tr>
-        <tr><td><strong>Fang et al.</strong> 2026 (ECGFlowCMR)</td><td>12-lead ECG</td><td>UK Biobank and a proprietary set</td><td>Conditioning: not stated<br>Privacy: not stated</td><td>Synthetic pretraining gave small but steady gains, about 1 percentage point.</td><td>A different kind of patient-specific conditioning. The ECG constrains anatomy only weakly.</td></tr>
-        <tr><td><strong>Amirrajab et al.</strong> 2022</td><td>Segmentation masks</td><td>M&amp;Ms</td><td>Conditioning: not stated<br>Privacy: argued, not tested</td><td>A SPADE conditional GAN beat Pix2Pix and Pix2PixHD on image similarity.</td><td>Closest published version of baseline (mask to image).</td></tr>
-        <tr><td><strong>Amirrajab et al.</strong> 2023</td><td>Pathology-altered masks</td><td>ACDC, M&amp;Ms</td><td>Conditioning: not stated<br>Privacy: not stated</td><td>Helped segmentation generalise across vendors and to scarce pathologies.</td><td>Steers disease anatomy. Steer it with patient information.</td></tr>
-        <tr><td><strong>Diller et al.</strong> 2020</td><td>None (one disease cohort)</td><td>303 patients with tetralogy of Fallot</td><td>Conditioning: not applicable<br>Privacy: argued, not tested</td><td>A segmentation network trained on synthetic images came within 1% of one trained on real data.</td><td>Synthetic data can stand in for a small, rare-disease cohort.</td></tr>
-        <tr><td><strong>Edirisooriya et al.</strong> 2026</td><td>Segmentation masks</td><td>ACDC and M&amp;Ms, 2D slices at 128&times;128</td><td>Conditioning: not applicable<br>Privacy: <strong>yes</strong></td><td>A DDPM gave the best balance of fidelity, utility and privacy. Membership-inference AUC was 0.58 to 0.60 for all three generators.</td><td>Evaluation protocol and a likely source for the baseline.</td></tr>
-      </tbody>
-    </table>
+<h3>Generation architecture</h3><h2>System pipeline</h2>
+  
+  <p>Choose a view. Every real input is tagged REAL and everything generated by a model is tagged SYNTHETIC.</p>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-p="p1">Overview</button>
+    <button role="tab" aria-selected="false" data-p="p2">Stage 1: mask model</button>
+    <button role="tab" aria-selected="false" data-p="p3">Stage 2: SPADE GAN</button>
+    <button role="tab" aria-selected="false" data-p="p5">Stage 2: flow matching</button>
+    <button role="tab" aria-selected="false" data-p="p4">Two-step generator</button>
   </div>
-  <p style="margin-top:14px">Across these ten papers, all measure fidelity and utility, but only one measures privacy, and only three clearly check that the conditioning worked. This is a pattern in the papers reviewed (searched on 8 October 2026), not a count of the whole field. Background reading, not in the table: two reviews (Chen et al. 2022 on GANs for medical image augmentation, Kazerouni et al. 2023 on diffusion models in medical imaging), a review of cardiac MRI generation (Kumarasinghe et al. 2026), and a study on lung and retinal images (Hosseini and Serag 2025) that is relevant to the point that a realistic image is not enough, but not to cardiac MRI. Details, sources and the reasoning are in <a href="https://github.com/riyaguharoy/personalized-synthetic-cmri-img-dl/blob/main/literature/literature_review.md">the literature review</a>.</p>
+  <div class="panel" id="p1"><figure><a href="assets/generation_architecture.png" target="_blank" rel="noopener"><img src="assets/generation_architecture.png" alt="Generation architecture: stage 1 conditional VAE makes a mask from the 14 features and noise, stage 2 makes an image with a SPADE GAN or a flow matching model"></a><figcaption>The two-stage generation pipeline. Stage 2 has two alternative models, a GAN and flow matching. Click the image to open it full size.</figcaption></figure></div>
+  <div class="panel" id="p2" hidden><figure><a href="assets/mask_vae_architecture.png" target="_blank" rel="noopener"><img src="assets/mask_vae_architecture.png" alt="Conditional VAE for masks"></a><figcaption>Stage 1: a conditional VAE. During training an encoder sees the real mask. At generation only the decoder is used.</figcaption></figure></div>
+  <div class="panel" id="p3" hidden><figure><a href="assets/spade_architecture.png" target="_blank" rel="noopener"><img src="assets/spade_architecture.png" alt="SPADE GAN generator and discriminator"></a><figcaption>Stage 2 baseline: a SPADE GAN. The mask enters every block of the generator.</figcaption></figure></div>
+  <div class="panel" id="p5" hidden><figure><a href="assets/flow_architecture.png" target="_blank" rel="noopener"><img src="assets/flow_architecture.png" alt="Flow matching image model: noisy image, mask embedding and time embedding enter a velocity U-Net that predicts the direction from noise to image"></a><figcaption>Stage 2, flow matching: a velocity U-Net gets the noisy image, with the mask and the time added in every block, and predicts the direction from noise to image. 50 steps at generation.</figcaption></figure></div>
+  <div class="panel" id="p4" hidden><figure><a href="assets/architecture_two_step.png" target="_blank" rel="noopener"><img src="assets/architecture_two_step.png" alt="Two-step generator"></a><figcaption>The two steps joined: features and noise to a synthetic mask, then mask and noise to a synthetic image (flow matching shown).</figcaption></figure></div>
+  <p><a href="models/mask-vae.html">Mask model page</a> &middot; <a href="models/spade-gan.html">SPADE GAN page</a> &middot; <a href="models/flow-model.html">Flow model page</a></p>
+
+  <h3>Stage 2 models side by side</h3>
+<div class="tablewrap"><table><thead><tr><th></th><th>SPADE GAN (baseline)</th><th>Flow matching (diffusion-style)</th></tr></thead><tbody>
+<tr><td><strong>Input</strong></td><td>mask and noise</td><td>mask and a noise image</td></tr>
+<tr><td><strong>Network</strong></td><td>SPADE generator 14.6M + discriminator 2.8M</td><td>U-Net with residual and attention blocks, 24.7M, mask injected in every block</td></tr>
+<tr><td><strong>Training</strong></td><td>hinge loss + 10&times; feature matching + 10&times; L1, 150 epochs</td><td>flow matching regression, 16,000 steps, 10% mask dropout, EMA 0.999</td></tr>
+<tr><td><strong>Generation</strong></td><td>one forward pass</td><td>50 steps, guidance scale 2</td></tr>
+<tr><td><strong>FID / KID (real masks)</strong></td><td>189.5 / 0.122</td><td class="best">118.8 / 0.040</td></tr>
+</tbody></table></div><h3>Evaluation plan</h3>
+  <div class="evalgrid">
+    <div class="card"><span class="stat-chip done">Measured</span><h3>Image fidelity</h3><p>FID and KID between synthetic and real validation images, with a floor (real against real).</p></div>
+    <div class="card"><span class="stat-chip done">Measured</span><h3>Did the conditioning work?</h3><p>Volumes, ejection fraction and ratios are measured on the generated masks and compared with the requested values, against a shuffled-feature control.</p></div>
+    <div class="card"><span class="stat-chip plan">Planned</span><h3>Utility</h3><p>Train segmentation or classification models on real, synthetic and combined data, and test on real data, including M&amp;Ms.</p></div>
+    <div class="card"><span class="stat-chip plan">Planned</span><h3>Privacy</h3><p>Nearest-neighbour distance to the training images and membership-inference tests.</p></div>
+  </div>
+
 </section>
 
-<section id="datasets">
-  <h2>Candidate datasets</h2>
+<section id="data">
+  <div class="secno">04</div><h2>Data</h2>
+
   <p>A conditioned model can only use the patient information a dataset actually carries, and that varies a lot.</p>
   <div class="tablewrap">
     <table>
@@ -233,14 +332,11 @@
     </table>
   </div>
   <p style="margin-top:14px">The full notes, including what is confirmed and what still needs checking on the downloaded data, are in <a href="https://github.com/riyaguharoy/personalized-synthetic-cmri-img-dl/blob/main/datasets/dataset_summary.md">the dataset summary</a>. The repository includes a script that audits the real data once it is downloaded. ACDC and M&amp;Ms have both been audited (next two sections).</p>
-</section>
-
-<section id="acdc-audit">
-  <h2>ACDC audit: what the downloaded data shows</h2>
+<details class="fold" id="acdc-audit"><summary><span class="ft">ACDC audit</span><span class="fs">what the downloaded data shows</span></summary><div class="fbody">
   <p>The audit script was run on the 100 labelled ACDC training patients. The table gives group means computed from the manual masks. Only these summary numbers are shown here, never patient-level data.</p>
   <div class="grid">
     <div class="card">
-      <h3>What was confirmed</h3>
+      <h4>What was confirmed</h4>
       <ul class="clean">
         <li>100 patients, 20 in each of five groups, no missing values</li>
         <li>Clinical information is limited to diagnosis group, height and weight. BMI and body surface area are derived from the last two.</li>
@@ -248,7 +344,7 @@
       </ul>
     </div>
     <div class="card">
-      <h3>What it means for the thesis</h3>
+      <h4>What it means for the thesis</h4>
       <ul class="clean">
         <li>Diagnosis group is the strong signal. Height and weight differ little between groups, so their effect will be hard to detect.</li>
         <li>Volumes and ejection fraction measured on generated masks give a direct check of whether the conditioning worked.</li>
@@ -268,14 +364,11 @@
     </table>
   </div>
   <p style="margin-top:14px">The pattern matches the diagnoses: a large, weakly contracting left ventricle in DCM, a thick myocardium with high EF in HCM, and a large right ventricle with low RV EF in the RV group. This also confirms that the masks and the script work as intended.</p>
-</section>
-
-<section id="mnms-audit">
-  <h2>M&amp;Ms audit: what the metadata shows</h2>
+</div></details><details class="fold" id="mnms-audit"><summary><span class="ft">M&amp;Ms audit</span><span class="fs">what the metadata shows</span></summary><div class="fbody">
   <p>The audit script was run on the metadata file of the public M&amp;Ms release (345 cases). This section covers the clinical information. The images and masks were processed afterwards (next section).</p>
   <div class="grid">
     <div class="card">
-      <h3>What was confirmed</h3>
+      <h4>What was confirmed</h4>
       <ul class="clean">
         <li>Age and sex are present for every case (211 male, 134 female, ages 15 to 90). Weight is missing for 2 cases.</li>
         <li>Height is missing for 210 of 345 cases (61%). It is absent for every Philips and GE case, so it is usable only for Siemens and Canon.</li>
@@ -283,7 +376,7 @@
       </ul>
     </div>
     <div class="card">
-      <h3>What it means for the thesis</h3>
+      <h4>What it means for the thesis</h4>
       <ul class="clean">
         <li>ACDC and M&amp;Ms share diagnosis (DCM, HCM, normal) and weight. Age and sex exist only in M&amp;Ms, so a model trained on ACDC cannot use them, and the ACDC to M&amp;Ms test rests on diagnosis.</li>
         <li>ACDC's MINF and RV groups have no direct match in M&amp;Ms. The closest labels are IHD (5 cases) and ARV (15 cases), which are not the same conditions.</li>
@@ -320,14 +413,11 @@
     </table>
   </div>
   <p style="margin-top:14px">Mean age differs a lot between diagnoses (about 45 for DCM, about 61 for HCM), so age and diagnosis cannot be separated cleanly in this dataset.</p>
-</section>
-
-<section id="preprocessing">
-  <h2>Preprocessed data: what the model will see</h2>
+</div></details><details class="fold" id="preprocessing"><summary><span class="ft">Preprocessed data</span><span class="fs">what the model sees (128 &times; 128, 1.5 mm, patient-level split)</span></summary><div class="fbody">
   <p>Both datasets were converted into the same format so that a model trained on ACDC can be tested on M&amp;Ms: 2D short-axis slices at the end-diastolic (ED) and end-systolic (ES) frames, resampled to 1.5 mm pixels, cropped to 128&times;128 around the heart, with intensity normalised per volume. Splits are made by patient, never by slice.</p>
   <div class="grid">
     <div class="card">
-      <h3>ACDC (training and testing)</h3>
+      <h4>ACDC (training and testing)</h4>
       <ul class="clean">
         <li>100 patients, 1,902 slices</li>
         <li>Per diagnosis group, from 22 Oct: 17 patients for training and 3 for validation (85 and 15 in total). The original ACDC test set stays untouched until the final stage. The earlier split (14 / 2 / 4) was used for the first results below.</li>
@@ -335,7 +425,7 @@
       </ul>
     </div>
     <div class="card">
-      <h3>M&amp;Ms (external test)</h3>
+      <h4>M&amp;Ms (external test)</h4>
       <ul class="clean">
         <li>345 cases, 7,908 slices, all kept for external testing</li>
         <li>Labels converted to the ACDC convention and checked on the images and on chamber volumes</li>
@@ -352,13 +442,15 @@
 <figure><a href="assets/mnms_examples.png" target="_blank" rel="noopener"><img src="assets/mnms_examples.png" alt="Real M&amp;Ms example slices with segmentation overlay, by diagnosis and scanner vendor, ED above and ES below"></a><figcaption>Real example slices from M&amp;Ms (Campello et al., 2021), labelled by diagnosis and scanner vendor, ED (top) and ES (bottom). Case identifiers removed. Same colour overlay as above.</figcaption></figure>
 <p style="font-size:14px;color:var(--muted)">Only these few small example slices are shown, with credit to the dataset authors. The datasets themselves are not redistributed. Datasets: ACDC (Bernard et al., 2018) and M&amp;Ms (Campello et al., 2021).</p>
   <div class="note"><strong>A caution for the external test.</strong> The same diagnosis label means different severity in the two datasets. The mean LV ejection fraction of the DCM group is 18% in ACDC but 48% in M&amp;Ms, with a wide spread (5% to 85%). Results on M&amp;Ms will therefore also be reported by measured ejection fraction, not only by diagnosis.</div>
+</div></details>
 </section>
 
 <section id="features">
-  <h2>The 14 features: what they are and how they are calculated</h2>
+  <div class="secno">05</div><h2>The 14 clinical features</h2>
+<p>The condition for the whole pipeline: how each feature is calculated from a mask, and why it describes the diagnosis.</p><details class="fold" id="features-detail"><summary><span class="ft">Equations and worked examples</span><span class="fs">height, weight, volumes, ejection fractions, ratios</span></summary><div class="fbody">
   <p>The mask model is controlled by 14 numbers that describe the heart. They are the features used to classify the five ACDC diagnoses in the challenge paper by Wolterink et al., which is why they carry the diagnosis information. Twelve of the 14 are calculated from a segmentation mask. Only height and weight come from the patient file. This section explains each one from the beginning.</p>
 
-  <h3>Step 1: from a mask to a volume</h3>
+  <h4>Step 1: from a mask to a volume</h4>
   <p>A mask labels every pixel as background, right ventricle (RV), myocardium (MYO) or left ventricle (LV). The heart is scanned as a stack of 2D slices, so a volume is the number of pixels with a given label, added up over all slices, times the volume of one voxel (one pixel times the slice thickness).</p>
   <p class="eq" style="white-space:normal;text-align:center;font-size:1.1rem">V<sub>k</sub><sup>ph</sup> = N<sub>k</sub><sup>ph</sup> &times; &Delta;x &times; &Delta;y &times; &Delta;z &divide; 1000</p>
   <ul class="clean">
@@ -369,7 +461,7 @@
   </ul>
   <p><strong>Worked example (round numbers, not a real patient).</strong> If 1,200 pixels carry the LV label over all ED slices, and the slice thickness is 10 mm, one voxel is 1.5 &times; 1.5 &times; 10 = 22.5 mm&sup3;. The LV volume is 1,200 &times; 22.5 = 27,000 mm&sup3; = 27 mL.</p>
 
-  <h3>Step 2: the 14 features</h3>
+  <h4>Step 2: the 14 features</h4>
   <div class="tablewrap">
     <table>
       <thead><tr><th>#</th><th>Feature</th><th>Equation</th><th>In words</th></tr></thead>
@@ -393,7 +485,7 @@
   </div>
   <p style="margin-top:14px"><strong>Worked example for the ejection fraction.</strong> If the LV volume is 150 mL at ED and 60 mL at ES, then EF = 100 &times; (150 &minus; 60) &divide; 150 = 60%. A weak, dilated heart might go from 285 mL to 233 mL, which gives EF = 100 &times; 52 &divide; 285 = 18%.</p>
 
-  <h3>Why these features describe the diagnosis</h3>
+  <h4>Why these features describe the diagnosis</h4>
   <ul class="clean">
     <li><strong>DCM</strong> (dilated): a very large LV volume and a low EF.</li>
     <li><strong>HCM</strong> (thick muscle): a small LV, a high EF and a high MYO/LV ratio.</li>
@@ -403,22 +495,65 @@
   </ul>
   <p>The group means in the <a href="#acdc-audit">ACDC audit</a> and in <a href="#results">First results</a> show exactly this pattern. The features were checked against the earlier audit values: the correlation is 0.999 or higher and the mean difference is under 1 mL.</p>
 
-  <h3>Limits to keep in mind</h3>
+  <h4>Limits to keep in mind</h4>
   <ul class="clean">
     <li>The volumes use the pixel size after resampling to 1.5 mm and the slice thickness from the scan header. Gaps between slices are not modelled.</li>
     <li>Features 3 to 14 come from the masks, so they describe the heart's size and function, not its texture or the scanner.</li>
     <li>Wall thickness, shape and radiomics features, which some other papers use, are not among these 14.</li>
   </ul>
   <p style="font-size:14px;color:var(--muted)">Feature set: Wolterink et al., Automatic Segmentation and Disease Classification Using Cardiac Cine MR Images (<a href="https://arxiv.org/abs/1708.01141">arXiv 1708.01141</a>), as used in the ACDC challenge (Bernard et al., 2018).</p>
+</div></details>
+</section>
+
+<section id="models">
+  <div class="secno">06</div><h2>Models and synthetic samples</h2>
+
+  <div class="grid">
+    <div class="card"><span class="stat-chip done">Stage 1</span><h3>Conditional VAE (mask)</h3><p>Turns the 14 clinical features, the slice position, the phase and noise into a synthetic segmentation mask. About 2.2 million parameters.</p><p style="margin-bottom:0"><a href="models/mask-vae.html">Model page</a></p></div>
+    <div class="card"><span class="stat-chip plan">Stage 2 baseline</span><h3>SPADE GAN</h3><p>A conditional GAN that turns a mask and noise into an image. Noisy images and little variety, kept as the baseline.</p><p style="margin-bottom:0"><a href="models/spade-gan.html">Model page</a></p></div>
+    <div class="card"><span class="stat-chip done">Stage 2, best so far</span><h3>Flow matching</h3><p>A diffusion-style model: a U-Net follows a learned direction from noise to image in 50 steps, with the mask given to every layer. Sharper and more varied images.</p><p style="margin-bottom:0"><a href="models/flow-model.html">Model page</a></p></div>
+  </div>
+<h3>Synthetic cardiac MR images</h3>
+  <figure><a href="assets/samples_flow.png" target="_blank" rel="noopener"><img src="assets/samples_flow.png" alt="Real mask, synthetic image from the real mask, synthetic mask, synthetic image from the synthetic mask, and real image, for five diagnosis groups"></a><figcaption>One validation patient per diagnosis group (DCM, HCM, MINF, NOR, RV), middle slice at end-diastole, chosen by a fixed rule and not by quality. Rows: real mask; synthetic image from the real mask; synthetic mask from the 14 features; synthetic image from that synthetic mask; real image. The failures in DCM and HCM are the masks, and the images follow them. Click the image to open it full size.</figcaption></figure>
+
 </section>
 
 <section id="results">
-  <h2>Results</h2>
+  <div class="secno">07</div><h2>Results and findings</h2>
+<h2>Results and comparison</h2>
+  <p>All numbers are on the 15 validation patients (254 slices) and come from single runs. The original test sets are not used. &uarr;/&darr; marks the better direction, and the best value in each comparison is highlighted.</p>
+  <h3>Image fidelity (lower is better &darr;)</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Image model</th><th>Masks given</th><th>FID &darr;</th><th>KID &darr;</th></tr></thead>
+    <tbody>
+      <tr><td>SPADE GAN (baseline)</td><td>real</td><td>189.5</td><td>0.122 &plusmn; 0.007</td></tr>
+      <tr><td>SPADE GAN (baseline)</td><td>generated from the 14 features</td><td>200.4 &plusmn; 0.8</td><td>0.135 &plusmn; 0.002</td></tr>
+      <tr><td>Flow matching</td><td>real</td><td class="best">118.8</td><td class="best">0.040 &plusmn; 0.005</td></tr>
+      <tr><td>Flow matching</td><td>generated from the 14 features</td><td class="best">118.9</td><td class="best">0.038 &plusmn; 0.004</td></tr>
+      <tr><td>Floor: real train vs real validation images</td><td>&ndash;</td><td>99.0</td><td>0.005 &plusmn; 0.002</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Do the clinical features steer the masks?</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Per-slice area, correlation with the real slice &uarr;</th><th>RV</th><th>Myocardium</th><th>LV</th></tr></thead>
+    <tbody>
+      <tr><td>Matched features</td><td class="best">0.31</td><td class="best">0.52</td><td class="best">0.67</td></tr>
+      <tr><td>Shuffled features (control)</td><td>0.01</td><td>0.13</td><td>0.46</td></tr>
+    </tbody>
+  </table></div>
+  <div class="findings">
+    <div class="finding"><div class="n">FINDING 1</div><h3>Fidelity</h3><p>Flow matching lowers FID from 189.5 to 118.8 and KID from 0.122 to 0.040 with real masks. It is about 20 FID points above the real-against-real floor, against about 90 for the GAN.</p></div>
+    <div class="finding"><div class="n">FINDING 2</div><h3>Conditioning</h3><p>Swapping the features between patients lowers the agreement for every structure, so the profile steers the masks. LV volume and the two ratios follow the request well. Ejection fraction is only weakly controlled (correlation 0.26).</p></div>
+    <div class="finding"><div class="n">FINDING 3</div><h3>Cost of generated masks</h3><p>With the GAN, generated masks cost about 11 FID points compared with real masks. With flow matching the difference is negligible (one set of generated masks).</p></div>
+    <div class="finding"><div class="n">OPEN</div><h3>Limits and next steps</h3><p>Some generated masks still fail (DCM, HCM), and the images follow them. One run on 15 patients, and memorisation is not checked yet. Utility and privacy tests are still to do.</p></div>
+  </div>
+  
+<details class="fold" id="results-full"><summary><span class="ft">Full results and earlier experiments</span><span class="fs">every table: 85/15 split, earlier 70/10/20 split, baseline, stage 1, LV fix</span></summary><div class="fbody">
 
-  <h3>Results on the 85 / 15 split (current)</h3>
+  <h4>Results on the 85 / 15 split (current)</h4>
   <p>These are the current results. Stage 1 and stage 2 were trained on the 85 training patients and evaluated on the 15 validation patients (254 slices). The original ACDC test set was not used. The weight of the left-ventricle class in the stage 1 loss was chosen on validation, by a rule fixed in advance: the weight whose mean generated LV area is closest to the real one. Single run, 15 patients, so small differences are not meaningful.</p>
 
-  <h4>Fixing the missing left ventricle</h4>
+  <h5>Fixing the missing left ventricle</h5>
   <div class="tablewrap">
     <table>
       <thead><tr><th>LV weight in the loss</th><th>Slices with LV (real 99%)</th><th>LV area, gen. / real</th><th>Per-slice LV r</th><th>LV volume error (mL)</th><th>EF r</th></tr></thead>
@@ -431,7 +566,7 @@
   </div>
   <p style="margin-top:14px">A heavier LV weight largely removes the missing-cavity problem. The ejection fraction is still weakly controlled.</p>
 
-  <h4>Do the features steer the masks?</h4>
+  <h5>Do the features steer the masks?</h5>
   <div class="tablewrap">
     <table>
       <thead><tr><th>Per-slice area, correlation with the real slice</th><th>RV</th><th>Myocardium</th><th>LV</th></tr></thead>
@@ -457,7 +592,7 @@
     <li>The volumes and the two ratios follow the request. The absolute errors are large, and the ejection fraction is only weakly controlled. It is the difference of two volumes, so small errors add up.</li>
   </ul>
 
-  <h4>Stage 2: generated masks into the baseline</h4>
+  <h5>Stage 2: generated masks into the baseline</h5>
   <div class="tablewrap">
     <table>
       <thead><tr><th>Masks given to the baseline</th><th>FID</th><th>KID</th></tr></thead>
@@ -475,13 +610,13 @@
     <li>FID is biased upwards with few images (254 here), so KID is the more reliable of the two.</li>
   </ul>
 
-  <h4>Samples</h4>
+  <h5>Samples</h5>
   <figure>
     <a href="assets/samples_val.png" target="_blank" rel="noopener"><img src="assets/samples_val.png" alt="Four rows by five columns, one column per diagnosis group (DCM, HCM, MINF, NOR, RV). Rows: real mask, mask generated from the 14 features, image generated from the generated mask, real image."></a>
     <figcaption>One validation patient per diagnosis group, middle slice at end-diastole. The patient and slice were chosen by a fixed rule (first validation patient of each group), not by quality, so failures are shown too. NOR and MINF look plausible, and RV is rough. In DCM the generated mask is broken (a detached myocardium fragment and no RV), and in HCM only a small myocardium fragment appears. Colours: RV blue, myocardium yellow, LV red. Click the image to open it full size.</figcaption>
   </figure>
 
-  <h4>Image model v2: mask-conditioned flow matching</h4>
+  <h5>Image model v2: mask-conditioned flow matching</h5>
   <p>The baseline GAN limits the image quality, so a second image model was trained: a U-Net that turns noise into an image in 50 steps (flow matching, a diffusion-style method), with the mask given to every layer. It was trained on the 85 training patients only for 16,000 steps (24.7 million parameters) and scored on the same 15 validation patients with the same FID and KID code.</p>
   <div class="tablewrap">
     <table>
@@ -508,11 +643,11 @@
     <figcaption>Flow model, same validation patients and slices as above (first validation patient of each group, middle ED slice, chosen by a fixed rule). The images look like cardiac MR slices, with a clear myocardium wall. Errors of the mask carry over to the image: in DCM and HCM the generated mask is broken, and so is the image made from it. Click the image to open it full size.</figcaption>
   </figure>
 
-  <h3>Earlier results (70 / 10 / 20 split)</h3>
+  <h4>Earlier results (70 / 10 / 20 split)</h4>
   <div class="note"><strong>About the data split.</strong> On 22 October the split changed to 85 training and 15 validation patients, with the original ACDC test set kept untouched until the end. The first results further down were produced earlier, on a 70 / 10 / 20 split. The 20 patients called &ldquo;held-out&rdquo; there now belong to the training and validation pool. They are kept for comparison, and the current results are in the section above.</div>
   <p style="margin-top:14px">Early results from single runs, so no averages over seeds yet. The conditioned model has two stages: clinical information becomes a segmentation mask (stage 1), and the mask becomes an image with the baseline (stage 2). Stage 1 was first built on a diagnosis-and-measurements profile, then rebuilt on the 12 to 14 classification features agreed with the supervisors.</p>
 
-  <h3>Baseline: mask to image</h3>
+  <h4>Baseline: mask to image</h4>
   <p>A SPADE-style conditional GAN, written from scratch and trained on the ACDC training patients (150 epochs, about 75 minutes on a free GPU). Slices with an empty mask are left out. Image quality is measured with FID and KID, against a floor: the score of real images against other real images.</p>
   <div class="tablewrap">
     <table>
@@ -532,7 +667,7 @@
     <li>Variety is low. Two noise draws for the same mask differ by 0.044 on average, against 0.35 between generated and real images, so the baseline gives almost one image per mask. This is a limitation to report.</li>
   </ul>
 
-  <h3>Stage 1: clinical profile to mask</h3>
+  <h4>Stage 1: clinical profile to mask</h4>
   <p>The model takes diagnosis group, chamber volumes, ejection fractions, myocardial mass, BMI, body surface area, slice position and ED or ES phase, and produces a mask. A first conditional VAE ignored most of the profile, because its encoder sees the real mask and so already knows the size. It was replaced by two steps: a random forest predicts the RV, myocardium and LV areas from the profile, and a mask generator trained with the true areas as extra input produces the mask. At generation time the predicted areas get noise of the size of the predictor error, so masks vary. The model architecture is in the <a href="#progress">progress log</a>.</p>
   <p>Check: correlation between the area of each generated structure and the area in the real slice, with the real profile and with a shuffled profile as a control. Shuffling should break the link.</p>
   <div class="tablewrap">
@@ -547,7 +682,7 @@
   </div>
   <p style="margin-top:14px">The generated masks follow the clinical profile, and the held-out patients give the same picture as validation. The masks are plausible but a little blobby. The myocardium is the hardest part, because the wall is thin. Stage 1 is trained on ACDC only, and the check on M&amp;Ms is still to do.</p>
 
-  <h3>Stage 1, rebuilt on the 14 classification features</h3>
+  <h4>Stage 1, rebuilt on the 14 classification features</h4>
   <p>Following the direction agreed on 15 October, the mask is now generated from the 14 features used in the ACDC classification task (Wolterink et al.): height, weight, LV, RV and myocardium volume at ED and ES, LV and RV ejection fraction, and the RV/LV and myocardium/LV volume ratios at ED and ES. All of them are calculated from the masks (pixel count times voxel volume), and they match the earlier audit values (correlation 0.999 or higher). Group means show that they separate the five diagnoses.</p>
   <div class="tablewrap">
     <table>
@@ -596,7 +731,7 @@
     <li>The shuffled control is not clean for the myocardium/LV ratio (0.51). With 20 patients, a correlation of about 0.44 can arise by chance, so this is only slightly above chance, but it means that ratio is the least convincing.</li>
   </ul>
 
-  <h3>Stage 2: generated masks into the baseline</h3>
+  <h4>Stage 2: generated masks into the baseline</h4>
   <p>For each of the 355 slices of the 20 held-out patients, a mask was generated from the 14 features of its patient (three noise seeds), and the baseline made an image from it. These images are compared with the real images of the same slices. The reference is the same baseline given the real masks.</p>
   <div class="tablewrap">
     <table>
@@ -613,15 +748,58 @@
     <li><strong>Known weakness.</strong> Only 68% of the generated slices contain a left-ventricle label, against 98% of the real held-out slices, and the mean LV area is about half of the real one (373 against 703 pixels). In many slices the model draws a solid wall without the cavity. This is the first thing to improve.</li>
     <li>FID is biased upwards with few images (355 here), so KID is the more reliable of the two.</li>
   </ul>
+</div></details>
+</section>
+
+<section id="literature">
+  <div class="secno">08</div><h2>Literature and novelty</h2>
+
+  <p>A focused review of cardiac MRI generators that use patient-level information found a small, varied set of papers. Each conditions on something different, and few check the result in the same way.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Paper</th><th>Conditions on</th><th>Data</th><th>Checked?</th><th>Main finding</th><th>Why it matters here</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Campello et al.</strong> 2022</td><td>Age, BMI</td><td>UK Biobank; four-chamber, end-diastole, 2D</td><td>Conditioning: <strong>yes</strong> (age and BMI regressor)<br>Privacy: no</td><td>Adding 10 to 25% synthetic scans brought age-prediction error close to a balanced dataset.</td><td>Template for checking that conditioning worked, using an independent regressor.</td></tr>
+        <tr><td><strong>Skorupko et al.</strong> 2025</td><td>Sex, age, BMI, health condition (text) plus masks</td><td>UK Biobank</td><td>Conditioning: partly<br>Privacy: argued, not tested</td><td>Reduced imbalance, for example scarce diagnosed female patients, in a downstream classifier.</td><td>Conditions on profile plus mask. Add a direct conditioning check and a privacy test.</td></tr>
+        <tr><td><strong>Li et al.</strong> 2025 (CPGG)</td><td>Cardiac phenotypes (such as LVEF and LVEDV)</td><td>UK Biobank and a private set</td><td>Conditioning: not stated<br>Privacy: not stated</td><td>Pretraining on the synthetic data improved diagnosis and phenotype prediction.</td><td>Shows clinical characteristics can condition cine CMR.</td></tr>
+        <tr><td><strong>Cao et al.</strong> 2026</td><td>Diagnosis, chamber volumes, ejection fraction</td><td>Trained on ACDC and Data Science Bowl; tested on M&amp;Ms and M&amp;Ms-2</td><td>Conditioning: <strong>yes</strong> (r 0.66 to 0.94)<br>Privacy: no</td><td>FID 72.2. Synthetic data raised cross-vendor Dice by 1.4% and cut Hausdorff distance by 3.0 mm (nnU-Net).</td><td><strong>Closest to thesis.</strong> Adding a no-conditioning baseline and a privacy test.</td></tr>
+        <tr><td><strong>Rodr&iacute;guez et al.</strong> 2026</td><td>Structured metadata and slice position, as text</td><td>UK Biobank, 59,058 short-axis images</td><td>Conditioning: <strong>yes</strong> (subgroup alignment)<br>Privacy: not addressed</td><td>FID 37.5, 28.7% better than the earlier text-conditioned baseline that needs mask geometry. Disease-specific conditioning was the hardest task.</td><td>Newest metadata-conditioned CMR work (August 2026). Shows the area is moving fast.</td></tr>
+        <tr><td><strong>Fang et al.</strong> 2026 (ECGFlowCMR)</td><td>12-lead ECG</td><td>UK Biobank and a proprietary set</td><td>Conditioning: not stated<br>Privacy: not stated</td><td>Synthetic pretraining gave small but steady gains, about 1 percentage point.</td><td>A different kind of patient-specific conditioning. The ECG constrains anatomy only weakly.</td></tr>
+        <tr><td><strong>Amirrajab et al.</strong> 2022</td><td>Segmentation masks</td><td>M&amp;Ms</td><td>Conditioning: not stated<br>Privacy: argued, not tested</td><td>A SPADE conditional GAN beat Pix2Pix and Pix2PixHD on image similarity.</td><td>Closest published version of baseline (mask to image).</td></tr>
+        <tr><td><strong>Amirrajab et al.</strong> 2023</td><td>Pathology-altered masks</td><td>ACDC, M&amp;Ms</td><td>Conditioning: not stated<br>Privacy: not stated</td><td>Helped segmentation generalise across vendors and to scarce pathologies.</td><td>Steers disease anatomy. Steer it with patient information.</td></tr>
+        <tr><td><strong>Diller et al.</strong> 2020</td><td>None (one disease cohort)</td><td>303 patients with tetralogy of Fallot</td><td>Conditioning: not applicable<br>Privacy: argued, not tested</td><td>A segmentation network trained on synthetic images came within 1% of one trained on real data.</td><td>Synthetic data can stand in for a small, rare-disease cohort.</td></tr>
+        <tr><td><strong>Edirisooriya et al.</strong> 2026</td><td>Segmentation masks</td><td>ACDC and M&amp;Ms, 2D slices at 128&times;128</td><td>Conditioning: not applicable<br>Privacy: <strong>yes</strong></td><td>A DDPM gave the best balance of fidelity, utility and privacy. Membership-inference AUC was 0.58 to 0.60 for all three generators.</td><td>Evaluation protocol and a likely source for the baseline.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:14px">Across these ten papers, all measure fidelity and utility, but only one measures privacy, and only three clearly check that the conditioning worked. This is a pattern in the papers reviewed (searched on 8 October 2026), not a count of the whole field. Background reading, not in the table: two reviews (Chen et al. 2022 on GANs for medical image augmentation, Kazerouni et al. 2023 on diffusion models in medical imaging), a review of cardiac MRI generation (Kumarasinghe et al. 2026), and a study on lung and retinal images (Hosseini and Serag 2025) that is relevant to the point that a realistic image is not enough, but not to cardiac MRI. Details, sources and the reasoning are in <a href="https://github.com/riyaguharoy/personalized-synthetic-cmri-img-dl/blob/main/literature/literature_review.md">the literature review</a>.</p>
+
 </section>
 
 <section id="progress">
-  <h2>Progress log</h2>
-  <p>What has been done so far, newest first. Each entry says which stage of the <a href="#plan">plan</a> it belongs to. Click an entry to open it.</p>
+  <div class="secno">09</div><h2>Progress and plan</h2>
+<h3 id="plan">Plan and status</h3>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Stage</th><th>Period</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Project proposal and literature review draft</td><td>Aug to Sep 2026</td><td class="status-done">Done</td></tr>
+        <tr><td>Dataset investigation and project design</td><td>Sep to early Nov 2026</td><td class="status-done">Done</td></tr>
+        <tr><td>Baseline development</td><td>Oct to early Nov 2026</td><td class="status-done">Done (first version)</td></tr>
+        <tr><td>Clinical-profile conditioning and first evaluation</td><td>Nov to Dec 2026</td><td class="status-now">In progress (both stages built and re-run on the 85 / 15 split, LV fix done, flow image model first run done)</td></tr>
+        <tr><td>Full evaluation: fidelity, utility, privacy</td><td>Jan to Mar 2027</td><td class="status-next">Planned</td></tr>
+        <tr><td>Comparative analysis and thesis writing</td><td>Apr to May 2027</td><td class="status-next">Planned</td></tr>
+        <tr><td>Thesis submission and presentation</td><td>May to June 2027</td><td class="status-next">Planned</td></tr>
+      </tbody>
+    </table>
+  </div>
+<h3>Progress log</h3>
+  <p>What has been done so far, newest first. Each entry says which stage of the <a href="#progress">plan</a> it belongs to. Click an entry to open it.</p>
 
   <div class="next">
-    <h3>Next</h3>
+    <h4>Next</h4>
     <ul class="clean" style="margin:0">
+      <li>Run the new two-step generator notebook (features and noise to mask to image in one call) and add its result and samples.</li>
       <li>Make the flow-model result solid: repeat with other random seeds, check that it does not memorise training images (nearest-neighbour distance), and retrain the GAN on all 85 patients for a fair comparison.</li>
       <li>Improve the masks that still fail (the DCM and HCM samples, the myocardium that is too thick, the RV drawn too often), since mask errors now carry over to the image.</li>
       <li>Later, once the generation part is settled: the final run on the ACDC test set, the check on M&amp;Ms, and the use of the synthetic data for classification or segmentation, plus privacy tests.</li>
@@ -631,6 +809,18 @@
   <div class="log">
 
     <details class="entry" open>
+      <summary><span class="date">29 Oct 2026</span><span class="title">Supervisor meeting: two-step generator, labels and report</span><span class="chip">Project design</span></summary>
+      <div class="body">
+        <ul class="clean">
+          <li><strong>Two-step pipeline.</strong> Step 1 makes a mask from the 14 features and noise. Step 2 makes a CMR image from that mask. A notebook now joins both steps in one generator. It still has to be run on the real checkpoints.</li>
+          <li><strong>Labels and diagrams.</strong> The pipeline diagram tags every box as real patient data or synthetic data. A new architecture diagram shows the two-step generator.</li>
+          <li><strong>Report.</strong> The models now have one page each (<a href="#models">The models</a>), with input data, training, architecture and visual results.</li>
+          <li><strong>Equations.</strong> The 14 features and their equations are in <a href="#features">The 14 features</a>.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="entry">
       <summary><span class="date">29 Oct 2026</span><span class="title">Better image quality: flow-matching image model</span><span class="chip">Clinical-profile conditioning</span></summary>
       <div class="body">
         <ul class="clean">
@@ -661,7 +851,7 @@
           <li><strong>Data split.</strong> The 100 labelled ACDC patients are now split into 85 for training and 15 for validation. The original ACDC test set stays untouched until all experiments are finished, and M&amp;Ms is an additional test set that is not used for training. All development results are reported on the validation patients.</li>
           <li><strong>Scope.</strong> The focus is the generation of synthetic data (masks and images). Segmentation and classification are later uses of the generated data and are left out for now.</li>
           <li><strong>Features.</strong> The 14 features from the Wolterink et al. classification paper are the condition for the mask model. Their equations and a worked example are in <a href="#features">The 14 features</a>.</li>
-          <li><strong>Pipeline.</strong> The step-by-step experimental flow is drawn in <a href="#method">How it works</a>.</li>
+          <li><strong>Pipeline.</strong> The step-by-step experimental flow is drawn in <a href="#approach">How it works</a>.</li>
         </ul>
       </div>
     </details>
@@ -712,7 +902,7 @@
       <div class="body">
         <figure>
           <a href="assets/cvae_architecture.png" target="_blank" rel="noopener"><img src="assets/cvae_architecture.png" alt="Diagram of the stage 1 model. Top: training, where an encoder sees the real mask and the condition, a 16-value latent code is sampled, and a decoder rebuilds the mask. Bottom: generation from a clinical profile, where a random forest predicts areas, noise is added, and the decoder produces a mask."></a>
-          <figcaption>Stage 1 model. Top (A): training, where the encoder sees the real mask. Bottom (B): generation from a clinical profile, where no real mask is used. Click the image to open it full size.</figcaption>
+          <figcaption>Earlier version of the stage 1 model (diagnosis and measurements profile, with a random-forest step); the current model is on the <a href="models/mask-vae.html">mask model page</a>. Top (A): training, where the encoder sees the real mask. Bottom (B): generation from a clinical profile, where no real mask is used. Click the image to open it full size.</figcaption>
         </figure>
         <ul class="clean">
           <li><strong>Type.</strong> A conditional variational autoencoder (VAE): a convolutional encoder and decoder joined by a 16-value latent code, with 2.21 million parameters. There are no skip connections between the encoder and the decoder, so it is not a U-Net.</li>
@@ -755,28 +945,25 @@
          Use the stage names from the plan table. Only the newest entry should have the word "open" in its opening tag. -->
 
   </div>
+
 </section>
 
-<section id="plan">
-  <h2>Plan and status</h2>
-  <div class="tablewrap">
-    <table>
-      <thead><tr><th>Stage</th><th>Period</th><th>Status</th></tr></thead>
-      <tbody>
-        <tr><td>Project proposal and literature review draft</td><td>Aug to Sep 2026</td><td class="status-done">Done</td></tr>
-        <tr><td>Dataset investigation and project design</td><td>Sep to early Nov 2026</td><td class="status-done">Done</td></tr>
-        <tr><td>Baseline development</td><td>Oct to early Nov 2026</td><td class="status-done">Done (first version)</td></tr>
-        <tr><td>Clinical-profile conditioning and first evaluation</td><td>Nov to Dec 2026</td><td class="status-now">In progress (both stages built and re-run on the 85 / 15 split, LV fix done, flow image model first run done)</td></tr>
-        <tr><td>Full evaluation: fidelity, utility, privacy</td><td>Jan to Mar 2027</td><td class="status-next">Planned</td></tr>
-        <tr><td>Comparative analysis and thesis writing</td><td>Apr to May 2027</td><td class="status-next">Planned</td></tr>
-        <tr><td>Thesis submission and presentation</td><td>May to June 2027</td><td class="status-next">Planned</td></tr>
-      </tbody>
-    </table>
+<section id="glossary">
+  <div class="secno">10</div><h2>Glossary</h2>
+  <p>Short definitions of the heart terms and the machine learning terms used on this page.</p>
+  <h3>Heart and data terms</h3><div class="tablewrap"><table><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody><tr><td><strong>Cardiac MRI (CMR)</strong></td><td>A scan that films the beating heart without radiation. The images come from it.</td></tr><tr><td><strong>Short-axis slice</strong></td><td>One round cross-section of the heart. A scan is a stack of them from the base to the apex. The 2D models generate one slice.</td></tr><tr><td><strong>LV, RV</strong></td><td>Left and right ventricle, the two main pumping chambers. LV supplies the body, RV the lungs.</td></tr><tr><td><strong>Myocardium (MYO)</strong></td><td>The heart muscle ring around the LV. It is thick in HCM.</td></tr><tr><td><strong>ED, ES</strong></td><td>End-diastole (heart full) and end-systole (just squeezed). Both phases are used.</td></tr><tr><td><strong>EDV, ESV</strong></td><td>Blood volume of a ventricle at ED and at ES, in mL. Computed from mask pixel count, pixel size and slice thickness.</td></tr><tr><td><strong>EF (ejection fraction)</strong></td><td>100 &times; (EDV &minus; ESV) / EDV, the share of blood pumped out per beat. Roughly 55 to 70% in a healthy LV.</td></tr><tr><td><strong>Myocardial mass</strong></td><td>Myocardium volume at ED times 1.05 g/mL, in grams.</td></tr><tr><td><strong>BMI, BSA</strong></td><td>Body mass index (weight / height squared) and body surface area. Separate body size from disease.</td></tr><tr><td><strong>Segmentation mask</strong></td><td>A label image: every pixel is background, RV, myocardium or LV.</td></tr><tr><td><strong>NOR, DCM, HCM, MINF, RV</strong></td><td>The five ACDC groups: normal, dilated cardiomyopathy (big LV, low EF), hypertrophic cardiomyopathy (thick muscle), previous heart attack, abnormal right ventricle.</td></tr><tr><td><strong>Clinical profile</strong></td><td>The patient information used as the condition: here the 14 features (height, weight, volumes, EFs, ratios).</td></tr></tbody></table></div>
+  <h3>Method and evaluation terms</h3><div class="tablewrap"><table><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody><tr><td><strong>Conditioning</strong></td><td>Giving a model extra information (the clinical profile or a mask) so the output follows it.</td></tr><tr><td><strong>VAE / conditional VAE</strong></td><td>A model that learns to compress and rebuild data through a small random code z. Used in stage 1: features and noise to a synthetic mask.</td></tr><tr><td><strong>GAN</strong></td><td>A generator and a discriminator trained against each other. SPADE GAN is the stage 2 baseline.</td></tr><tr><td><strong>SPADE</strong></td><td>A layer that feeds the mask into every block of the generator, so the image keeps the mask's shape.</td></tr><tr><td><strong>Diffusion / flow matching</strong></td><td>Models that turn noise into an image in many small steps. Flow matching learns the straight direction from noise to image; 50 steps at generation.</td></tr><tr><td><strong>Classifier-free guidance</strong></td><td>Training with the mask sometimes dropped (10%), then pushing the output towards the mask at generation (scale 2).</td></tr><tr><td><strong>EMA</strong></td><td>A smoothed copy of the weights during training, used for sampling (decay 0.999).</td></tr><tr><td><strong>FID</strong></td><td>Fr&eacute;chet Inception Distance. Distance between real and synthetic image features. Lower is better. Real-vs-real gives a floor (99.0 here).</td></tr><tr><td><strong>KID</strong></td><td>Kernel Inception Distance. Like FID but less biased on small sets. Lower is better.</td></tr><tr><td><strong>Matched vs shuffled</strong></td><td>Check: compare generated structures with the requested ones, then repeat with the features swapped between patients. A real effect must be lower when shuffled.</td></tr><tr><td><strong>Utility</strong></td><td>Whether a model trained on synthetic data works on real data (for example segmentation Dice).</td></tr><tr><td><strong>Privacy</strong></td><td>Whether synthetic images copy training images: nearest-neighbour distance and membership-inference tests.</td></tr><tr><td><strong>Patient-level split</strong></td><td>All slices of one patient stay in one set (85 train / 15 validation), so there is no leakage.</td></tr><tr><td><strong>Design Science Research</strong></td><td>The method of the thesis: build an artefact, evaluate it, improve it.</td></tr></tbody></table></div>
+</section>
+<section id="team">
+  <div class="secno">11</div><h2>Team, repository and links</h2>
+<h2>Student and supervisors</h2>
+  <div class="people">
+    <div class="person"><div class="avatar">RG</div><b>Riya Guha Roy</b><span>Student, MSc Computer Science (Data Science), University of South-Eastern Norway</span></div>
+    <div class="person"><div class="avatar">VN</div><b>Vimala Nunavath</b><span>Main supervisor, University of South-Eastern Norway</span></div>
+    <div class="person"><div class="avatar">VT</div><b>Vajira Thambawita</b><span>Supervisor, Simula Research Laboratory</span></div>
+    <div class="person"><div class="avatar">MM</div><b>Molly Maleckar</b><span>Supervisor, Simula Research Laboratory</span></div>
   </div>
-</section>
-
-<section id="repo">
-  <h2>What is in the repository</h2>
+<h3>Repository</h3>
   <ul class="clean">
     <li><code>literature/</code> the literature review, a summary spreadsheet and a CSV version of it</li>
     <li><code>datasets/</code> the dataset summary as a document and as a CSV</li>
@@ -784,27 +971,41 @@
     <li><code>docs/</code> this page</li>
   </ul>
   <p>No patient data are stored in the repository. The datasets must be downloaded from their official sources and used under their own licences.</p>
+<h3>Links</h3><h2>Useful links</h2>
+  <div class="linkcards">
+    <a href="https://github.com/riyaguharoy/personalized-synthetic-cmri-img-dl"><b>GitHub repository</b><span>Code, notes and this website</span></a>
+    <a href="#progress"><b>Project details</b><span>Literature, datasets, audits, the 14 features, progress log and plan</span></a>
+    <a href="#features"><b>The 14 features</b><span>Equations and worked examples</span></a>
+    <a href="https://github.com/riyaguharoy/personalized-synthetic-cmri-img-dl/blob/main/literature/literature_review.md"><b>Literature review</b><span>Sources and reasoning</span></a>
+    <a href="https://github.com/riyaguharoy/personalized-synthetic-cmri-img-dl/blob/main/datasets/dataset_summary.md"><b>Dataset summary</b><span>ACDC and M&amp;Ms notes</span></a>
+  </div>
+
 </section>
 
 </main>
 
-<footer>
-  <div class="wrap">
-    <p>Parts of this page and of the supporting documents were drafted with AI assistance. Facts were checked against the cited sources, and items marked "to confirm" are still open.</p>
-  </div>
-</footer>
+<footer><div class="wrap">Master's thesis project, University of South-Eastern Norway, in collaboration with Simula Research Laboratory. Datasets: ACDC (Bernard et al., 2018) and M&amp;Ms (Campello et al., 2021), not redistributed. Work in progress, 2026. Parts of this page were drafted with AI assistance; facts were checked against the cited sources, and items marked "to confirm" are still open.</div></footer>
 
 <script>
-(function(){
-  var links=[].slice.call(document.querySelectorAll('nav a'));
-  var map={};links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
-  if(!('IntersectionObserver' in window))return;
-  var io=new IntersectionObserver(function(es){es.forEach(function(e){
-    if(e.isIntersecting){links.forEach(function(a){a.classList.remove('active');});
-      var a=map[e.target.id];if(a){a.classList.add('active');var bar=a.parentNode;bar.scrollLeft=a.offsetLeft-(bar.clientWidth-a.offsetWidth)/2;}}
-  });},{rootMargin:'-30% 0px -60% 0px'});
-  document.querySelectorAll('main section[id]').forEach(function(s){io.observe(s);});
+(function () {
+  var tabs = document.querySelectorAll('.tabs button');
+  tabs.forEach(function (b) {
+    b.addEventListener('click', function () {
+      tabs.forEach(function (x) { x.setAttribute('aria-selected', x === b ? 'true' : 'false'); });
+      document.querySelectorAll('.panel').forEach(function (p) { p.hidden = (p.id !== b.dataset.p); });
+    });
+  });
+  var links = document.querySelectorAll('nav a[href^="#"]');
+  var secs = [];
+  links.forEach(function (a) { var s = document.querySelector(a.getAttribute('href')); if (s) secs.push([a, s]); });
+  function onScroll() {
+    var y = window.scrollY + 120, cur = null;
+    secs.forEach(function (p) { if (p[1].offsetTop <= y) cur = p[0]; });
+    links.forEach(function (a) { a.classList.toggle('active', a === cur); });
+  }
+  window.addEventListener('scroll', onScroll); onScroll();
 })();
+(function(){function o(){var e=document.getElementById(location.hash.slice(1));while(e){if(e.tagName==='DETAILS')e.open=true;e=e.parentElement;}}window.addEventListener('hashchange',o);o();})();
 </script>
 </body>
 </html>
