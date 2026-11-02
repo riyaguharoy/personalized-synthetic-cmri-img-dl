@@ -227,9 +227,9 @@
     <tbody>
       <tr><td><strong>RQ1.1</strong> What clinical information is available and suitable for conditioning?</td><td class="status-done">Answered</td><td>Both datasets audited. ACDC has diagnosis, height and weight; M&amp;Ms adds age and sex. The 14 classification features, calculated from the masks, were chosen as the condition (<a href="#features">The 14 features</a>).</td></tr>
       <tr><td><strong>RQ1.2</strong> How can it be incorporated into generating images and masks?</td><td class="status-done">First version built</td><td>A two-stage pipeline: features and noise make a mask (conditional VAE), and the mask makes the image (GAN or flow matching). Run end to end: FID 119.8.</td></tr>
-      <tr><td><strong>RQ2.1</strong> Do the generated images and masks keep plausible anatomy?</td><td class="status-now">Partly</td><td>Checked by eye and by the share of slices with a left ventricle (89%, real 99%). Some masks still fail. Systematic anatomy checks are still to add.</td></tr>
+      <tr><td><strong>RQ2.1</strong> Do the generated images and masks keep plausible anatomy?</td><td class="status-done">Measured</td><td>Anatomy checks (one region per class, LV present, myocardium wraps the LV, RV touches the heart): 54% of conditioned masks pass; with a generation-time filter that redraws failing masks, 100% pass. The checks cover structure only, not clinical realism.</td></tr>
       <tr><td><strong>RQ2.2</strong> Do they reflect the clinical profile used for conditioning?</td><td class="status-done">Measured</td><td>Matched against shuffled features: LV volume and the ratios follow the request, ejection fraction only weakly (see Results).</td></tr>
-      <tr><td><strong>RQ3.1</strong> Effect of conditioning on fidelity and anatomical consistency, against a baseline without it</td><td class="status-now">Partly</td><td>Fidelity is measured (FID, KID) with real masks and with generated masks. A baseline mask generator <em>without</em> the clinical profile is not built yet, so the full comparison is still open.</td></tr>
+      <tr><td><strong>RQ3.1</strong> Effect of conditioning on fidelity and anatomical consistency, against a baseline without it</td><td class="status-done">Measured (one run)</td><td>A baseline mask model without the profile was trained with the same recipe. The profile improves how well masks follow the real slices (LV r 0.64 vs 0.08) and patient LV volume (r 0.95 vs 0.45), and lowers FID from 124.3 to 119.8. Still open: repeat runs and the test sets.</td></tr>
       <tr><td><strong>RQ3.2</strong> Effect on downstream utility</td><td class="status-next">Planned</td><td>Segmentation or classification trained on real, synthetic and combined data.</td></tr>
       <tr><td><strong>RQ3.3</strong> Effect on privacy</td><td class="status-next">Planned</td><td>Nearest-neighbour distance and membership-inference tests.</td></tr>
     </tbody>
@@ -550,7 +550,9 @@
     <div class="finding"><div class="n">FINDING 2</div><h3>Conditioning</h3><p>Swapping the features between patients lowers the agreement for every structure, so the profile steers the masks. LV volume and the two ratios follow the request well. Ejection fraction is only weakly controlled (correlation 0.26).</p></div>
     <div class="finding"><div class="n">FINDING 3</div><h3>Cost of generated masks</h3><p>With the GAN, generated masks cost about 11 FID points compared with real masks. With flow matching the difference is negligible (one set of generated masks).</p></div>
     <div class="finding"><div class="n">FINDING 4</div><h3>Complete two-step generator</h3><p>Run end to end from the 14 features and noise, with no real mask or image, it scores FID 119.8 &plusmn; 2.6 and KID 0.038, the same as flow matching with real masks. The same profile with different noise gives different hearts. Failed masks still pass their errors on to the image.</p></div>
-    <div class="finding"><div class="n">OPEN</div><h3>Limits and next steps</h3><p>Some generated masks still fail (DCM, HCM), and the images follow them. One run on 15 patients, and memorisation is not checked yet. Utility and privacy tests are still to do.</p></div>
+    <div class="finding"><div class="n">FINDING 5</div><h3>The profile matters</h3><p>A mask model without the clinical profile gives masks that barely follow the real slices (LV r 0.08) and lowers image quality (FID 124.3 vs 119.8). With the profile: LV r 0.64, patient LV volume r 0.95. Ejection fraction stays weak in both.</p></div>
+    <div class="finding"><div class="n">FINDING 6</div><h3>Broken masks can be filtered</h3><p>Only 54% of conditioned masks pass the anatomy checks. Redrawing failing masks lifts that to 100% and keeps the profile effect.</p></div>
+    <div class="finding"><div class="n">OPEN</div><h3>Limits and next steps</h3><p>Without the filter, about half of the generated masks fail the anatomy checks and the images follow them. One training run on 15 patients, and memorisation is not checked yet. Utility and privacy tests are still to do.</p></div>
   </div>
   
 
@@ -568,6 +570,24 @@
     <figure><a href="assets/twostep_demo_groups.png" target="_blank" rel="noopener"><img src="assets/twostep_demo_groups.png" alt="Demo A: the average profile of each diagnosis group at two slice positions. Every panel is"></a><figcaption>Demo A: the average profile of each diagnosis group at two slice positions. Every panel is synthetic: masks from step 1, images from step 2.</figcaption></figure><figure><a href="assets/twostep_same_profile.png" target="_blank" rel="noopener"><img src="assets/twostep_same_profile.png" alt="Same DCM profile with five different noise seeds: the profile fixes the type of heart, the"></a><figcaption>Same DCM profile with five different noise seeds: the profile fixes the type of heart, the noise gives different shapes and images. All synthetic.</figcaption></figure>
   </div>
   <figure><a href="assets/twostep_validation_samples.png" target="_blank" rel="noopener"><img src="assets/twostep_validation_samples.png" alt="Features of five validation patients (one per group): synthetic mask (top) and synthetic i"></a><figcaption>Features of five validation patients (one per group): synthetic mask (top) and synthetic image (bottom). Several masks are broken (DCM, HCM, MINF), and the image follows them.</figcaption></figure>
+
+  <h3>RQ3.1: a baseline without the clinical profile, and the anatomy filter</h3>
+  <p>The same mask model was trained a second time with the 14 features switched off (it knows only the slice position and the phase). An <em>anatomy filter</em> redraws a failing mask with new noise (up to 20 tries) until it passes the checks. Both generators, with and without the filter, then fed the same flow-matching model. 15 validation patients, mean over 3 noise seeds. <em>r</em> = correlation with the real validation data.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Mask generator</th><th>Passes anatomy checks</th><th>RV area r</th><th>MYO area r</th><th>LV area r</th><th>LV volume r (patient)</th><th>FID &darr;</th><th>KID &darr;</th></tr></thead>
+    <tbody>
+      <tr><td>Baseline (no profile)</td><td>34.5%</td><td>0.07</td><td>0.09</td><td>0.08</td><td>0.45</td><td>124.3</td><td>0.045</td></tr>
+      <tr><td>Baseline + filter</td><td>100%</td><td>0.09</td><td>0.13</td><td>0.08</td><td>0.53</td><td>119.4</td><td>0.041</td></tr>
+      <tr><td>Conditioned (14 features)</td><td>53.8%</td><td class="best">0.23</td><td class="best">0.51</td><td class="best">0.64</td><td class="best">0.95</td><td>119.8</td><td class="best">0.037</td></tr>
+      <tr><td>Conditioned + filter</td><td>100%</td><td class="best">0.30</td><td class="best">0.50</td><td class="best">0.63</td><td class="best">0.95</td><td class="best">117.4</td><td class="best">0.036</td></tr>
+    </tbody>
+  </table></div>
+  <ul class="clean" style="margin-top:14px">
+    <li><strong>The profile matters.</strong> Without it the masks barely follow the real slices (LV r 0.08). With it LV r is 0.64 and the patient LV volume follows the real one (r 0.95). The baseline reaches 0.45 on volume only because the number of slices differs between patients.</li>
+    <li><strong>The filter fixes the broken masks without losing the profile effect.</strong> The pass rate rises from 54% to 100% (by construction: failing masks are redrawn), and the correlations stay the same (LV r 0.64 to 0.63). FID moves from 119.8 to 117.4, which is about the size of the spread between seeds (2.5), so the image gain is not proven.</li>
+    <li><strong>Limits.</strong> Ejection fraction is still weakly controlled in both (r 0.14 baseline, 0.26 conditioned, very unstable between seeds). The LV volume is ranked correctly but the absolute error is still large (about 47 mL). The checks test structure, not clinical realism. One training run, 15 patients.</li>
+  </ul>
+  <figure><a href="assets/baseline_vs_conditioned_masks.png" target="_blank" rel="noopener"><img src="assets/baseline_vs_conditioned_masks.png" alt="Real mask, baseline masks, conditioned masks with and without the filter, and a synthetic image, for five groups"></a><figcaption>One validation patient per group, middle ED slice. Row 1 is real, all other rows are synthetic: baseline without the profile, the same with the filter, conditioned, conditioned with the filter, and the image made from the last mask.</figcaption></figure>
 <details class="fold" id="results-full"><summary><span class="ft">Full results and earlier experiments</span><span class="fs">every table: 85/15 split, earlier 70/10/20 split, baseline, stage 1, LV fix</span></summary><div class="fbody">
 
   <h4>Results on the 85 / 15 split (current)</h4>
@@ -829,12 +849,23 @@
   <div class="log">
 
     <details class="entry" open>
+      <summary><span class="date">2 Nov 2026 (evening)</span><span class="title">Baseline without the profile, and the anatomy filter</span><span class="chip">RQ3.1, RQ2.1</span></summary>
+      <div class="body">
+        <ul class="clean">
+          <li><strong>Baseline (RQ3.1).</strong> The mask model was trained again with the 14 features switched off. Compared with it, the conditioned model follows the real slices much better (LV r 0.64 vs 0.08) and the patient LV volume (r 0.95 vs 0.45), and gives lower FID (119.8 vs 124.3). Ejection fraction stays weak in both.</li>
+          <li><strong>Failing masks (RQ2.1).</strong> Anatomy checks were written: only 54% of conditioned masks pass. A filter that redraws failing masks gives 100% and keeps the profile effect. See <a href="#results">Results</a>.</li>
+          <li><strong>Next.</strong> Repeat with other seeds, check for memorisation, improve ejection-fraction control, then utility and privacy.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="entry">
       <summary><span class="date">2 Nov 2026</span><span class="title">Two-step generator run on the validation patients</span><span class="chip">Generation</span></summary>
       <div class="body">
         <ul class="clean">
           <li><strong>Run.</strong> The joined generator (conditional VAE, then flow matching) was run on the 15 validation patients with 3 noise seeds: FID 119.8 &plusmn; 2.6, KID 0.038. See <a href="#results">Results</a>.</li>
           <li><strong>What it shows.</strong> Generated masks cost almost nothing in FID. Group-average profiles give clean hearts, the same profile with new noise gives varied ones, but several masks made from single patients are still broken (DCM, HCM, MINF).</li>
-          <li><strong>Next.</strong> Fix the failing masks, add the baseline mask generator without clinical conditioning (RQ3.1), and check for memorisation.</li>
+          <li><strong>Next.</strong> Fix the failing masks (done, see the evening entry), add the baseline mask generator without clinical conditioning (done), and check for memorisation.</li>
         </ul>
       </div>
     </details>
