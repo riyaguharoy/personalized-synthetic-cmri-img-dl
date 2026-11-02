@@ -226,7 +226,7 @@
     <thead><tr><th>Research question</th><th>Status</th><th>What answers it so far</th></tr></thead>
     <tbody>
       <tr><td><strong>RQ1.1</strong> What clinical information is available and suitable for conditioning?</td><td class="status-done">Answered</td><td>Both datasets audited. ACDC has diagnosis, height and weight; M&amp;Ms adds age and sex. The 14 classification features, calculated from the masks, were chosen as the condition (<a href="#features">The 14 features</a>).</td></tr>
-      <tr><td><strong>RQ1.2</strong> How can it be incorporated into generating images and masks?</td><td class="status-done">First version built</td><td>A two-stage pipeline: features and noise make a mask (conditional VAE), and the mask makes the image (GAN or flow matching).</td></tr>
+      <tr><td><strong>RQ1.2</strong> How can it be incorporated into generating images and masks?</td><td class="status-done">First version built</td><td>A two-stage pipeline: features and noise make a mask (conditional VAE), and the mask makes the image (GAN or flow matching). Run end to end: FID 119.8.</td></tr>
       <tr><td><strong>RQ2.1</strong> Do the generated images and masks keep plausible anatomy?</td><td class="status-now">Partly</td><td>Checked by eye and by the share of slices with a left ventricle (89%, real 99%). Some masks still fail. Systematic anatomy checks are still to add.</td></tr>
       <tr><td><strong>RQ2.2</strong> Do they reflect the clinical profile used for conditioning?</td><td class="status-done">Measured</td><td>Matched against shuffled features: LV volume and the ratios follow the request, ejection fraction only weakly (see Results).</td></tr>
       <tr><td><strong>RQ3.1</strong> Effect of conditioning on fidelity and anatomical consistency, against a baseline without it</td><td class="status-now">Partly</td><td>Fidelity is measured (FID, KID) with real masks and with generated masks. A baseline mask generator <em>without</em> the clinical profile is not built yet, so the full comparison is still open.</td></tr>
@@ -549,9 +549,25 @@
     <div class="finding"><div class="n">FINDING 1</div><h3>Fidelity</h3><p>Flow matching lowers FID from 189.5 to 118.8 and KID from 0.122 to 0.040 with real masks. It is about 20 FID points above the real-against-real floor, against about 90 for the GAN.</p></div>
     <div class="finding"><div class="n">FINDING 2</div><h3>Conditioning</h3><p>Swapping the features between patients lowers the agreement for every structure, so the profile steers the masks. LV volume and the two ratios follow the request well. Ejection fraction is only weakly controlled (correlation 0.26).</p></div>
     <div class="finding"><div class="n">FINDING 3</div><h3>Cost of generated masks</h3><p>With the GAN, generated masks cost about 11 FID points compared with real masks. With flow matching the difference is negligible (one set of generated masks).</p></div>
+    <div class="finding"><div class="n">FINDING 4</div><h3>Complete two-step generator</h3><p>Run end to end from the 14 features and noise, with no real mask or image, it scores FID 119.8 &plusmn; 2.6 and KID 0.038, the same as flow matching with real masks. The same profile with different noise gives different hearts. Failed masks still pass their errors on to the image.</p></div>
     <div class="finding"><div class="n">OPEN</div><h3>Limits and next steps</h3><p>Some generated masks still fail (DCM, HCM), and the images follow them. One run on 15 patients, and memorisation is not checked yet. Utility and privacy tests are still to do.</p></div>
   </div>
   
+
+  <h3>The complete two-step generator</h3>
+  <p>Step 1 (conditional VAE) and step 2 (flow matching) joined in one generator: the 14 features, the slice position, the phase and noise go in, a synthetic mask and a synthetic image come out. No real mask or image is used. Scores on the 15 validation patients (254 slices), 3 noise seeds:</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Generator</th><th>FID &darr;</th><th>KID &darr;</th></tr></thead>
+    <tbody>
+      <tr><td>Two-step generator (14 features &rarr; mask &rarr; image)</td><td class="best">119.8 &plusmn; 2.6</td><td class="best">0.038 &plusmn; 0.003</td></tr>
+      <tr><td>Flow matching with real masks (reference)</td><td>118.8</td><td>0.040 &plusmn; 0.005</td></tr>
+      <tr><td>Floor: real train vs real validation</td><td>99.0</td><td>0.005 &plusmn; 0.002</td></tr>
+    </tbody>
+  </table></div>
+  <div class="figrow">
+    <figure><a href="assets/twostep_demo_groups.png" target="_blank" rel="noopener"><img src="assets/twostep_demo_groups.png" alt="Demo A: the average profile of each diagnosis group at two slice positions. Every panel is"></a><figcaption>Demo A: the average profile of each diagnosis group at two slice positions. Every panel is synthetic: masks from step 1, images from step 2.</figcaption></figure><figure><a href="assets/twostep_same_profile.png" target="_blank" rel="noopener"><img src="assets/twostep_same_profile.png" alt="Same DCM profile with five different noise seeds: the profile fixes the type of heart, the"></a><figcaption>Same DCM profile with five different noise seeds: the profile fixes the type of heart, the noise gives different shapes and images. All synthetic.</figcaption></figure>
+  </div>
+  <figure><a href="assets/twostep_validation_samples.png" target="_blank" rel="noopener"><img src="assets/twostep_validation_samples.png" alt="Features of five validation patients (one per group): synthetic mask (top) and synthetic i"></a><figcaption>Features of five validation patients (one per group): synthetic mask (top) and synthetic image (bottom). Several masks are broken (DCM, HCM, MINF), and the image follows them.</figcaption></figure>
 <details class="fold" id="results-full"><summary><span class="ft">Full results and earlier experiments</span><span class="fs">every table: 85/15 split, earlier 70/10/20 split, baseline, stage 1, LV fix</span></summary><div class="fbody">
 
   <h4>Results on the 85 / 15 split (current)</h4>
@@ -813,6 +829,17 @@
   <div class="log">
 
     <details class="entry" open>
+      <summary><span class="date">2 Nov 2026</span><span class="title">Two-step generator run on the validation patients</span><span class="chip">Generation</span></summary>
+      <div class="body">
+        <ul class="clean">
+          <li><strong>Run.</strong> The joined generator (conditional VAE, then flow matching) was run on the 15 validation patients with 3 noise seeds: FID 119.8 &plusmn; 2.6, KID 0.038. See <a href="#results">Results</a>.</li>
+          <li><strong>What it shows.</strong> Generated masks cost almost nothing in FID. Group-average profiles give clean hearts, the same profile with new noise gives varied ones, but several masks made from single patients are still broken (DCM, HCM, MINF).</li>
+          <li><strong>Next.</strong> Fix the failing masks, add the baseline mask generator without clinical conditioning (RQ3.1), and check for memorisation.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="entry">
       <summary><span class="date">29 Oct 2026</span><span class="title">Supervisor meeting: two-step generator, labels and report</span><span class="chip">Project design</span></summary>
       <div class="body">
         <ul class="clean">
