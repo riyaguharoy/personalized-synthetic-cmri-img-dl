@@ -201,8 +201,8 @@
     <ul>
       <li><strong>What.</strong> A generator for synthetic cardiac MRI (a mask and the image) that is steered by a patient's clinical profile, not only by the heart's shape.</li>
       <li><strong>How.</strong> Two steps. A conditional VAE turns 14 clinical features into a heart mask, then an image model (SPADE GAN baseline, then flow matching) turns the mask into a scan.</li>
-      <li><strong>So far.</strong> It works end to end. Flow matching beats the GAN (FID 118.8 vs 189.5), and the clinical profile clearly steers the masks (volume correlation 0.95 with it, 0.45 without).</li>
-      <li><strong>Not yet.</strong> About half of the raw masks fail anatomy checks (a filter fixes that), ejection fraction control is weak, and the privacy and usefulness tests are still to do.</li>
+      <li><strong>So far.</strong> It works end to end. Flow matching beats the GAN (FID 118.8 vs 189.5), and the clinical profile clearly steers the masks (volume correlation 0.95 with it, 0.45 without). A newer mask generator passes the anatomy checks 87% of the time without any filter (real masks 93%).</li>
+      <li><strong>Not yet.</strong> The masks are still too regular (size features compressed, ejection fraction biased), the images from the newest masks are not better yet, and the privacy and usefulness tests are still to do.</li>
     </ul>
     <p class="jump">Jump to: <a href="#pipeline">Pipeline</a> &middot; <a href="#results">Results</a> &middot; <a href="#progress">Progress</a> &middot; <a href="#approach">Approach</a> &middot; <a href="#data">Data</a> &middot; <a href="#features">Features</a> &middot; <a href="#models">Models</a> &middot; <a href="#literature">Literature</a> &middot; <a href="#glossary">Glossary</a></p>
   </div>
@@ -242,7 +242,7 @@
     <tbody>
       <tr><td><strong>RQ1.1</strong> What clinical information is available and suitable for conditioning?</td><td class="status-done">Answered</td><td>Both datasets audited. ACDC has diagnosis, height and weight, M&amp;Ms adds age and sex. The 14 classification features, calculated from the masks, were chosen as the condition (<a href="#features">The 14 features</a>).</td></tr>
       <tr><td><strong>RQ1.2</strong> How can it be incorporated into generating images and masks?</td><td class="status-done">First version built</td><td>A two-stage pipeline: features and noise make a mask (conditional VAE), and the mask makes the image (GAN or flow matching). Run end to end: FID 119.8.</td></tr>
-      <tr><td><strong>RQ2.1</strong> Do the generated images and masks keep plausible anatomy?</td><td class="status-done">Measured</td><td>Anatomy checks (one region per class, LV present, myocardium wraps the LV, RV touches the heart): 54% of conditioned masks pass (93% of real masks do); with a generation-time filter that redraws failing masks, 100% pass. The checks cover structure only, not clinical realism.</td></tr>
+      <tr><td><strong>RQ2.1</strong> Do the generated images and masks keep plausible anatomy?</td><td class="status-done">Measured</td><td>Anatomy checks (one region per class, LV present, myocardium wraps the LV, RV touches the heart): 54% of conditioned masks pass (93% of real masks do); with a generation-time filter that redraws failing masks, 100% pass. A newer mask generator passes 87% without any filter (finding 7). The checks cover structure only, not clinical realism.</td></tr>
       <tr><td><strong>RQ2.2</strong> Do they reflect the clinical profile used for conditioning?</td><td class="status-done">Measured</td><td>Matched against shuffled features: LV volume and the ratios follow the request, ejection fraction only weakly (see Results).</td></tr>
       <tr><td><strong>RQ3.1</strong> Effect of conditioning on fidelity and anatomical consistency, against a baseline without it</td><td class="status-done">Measured (one run)</td><td>A baseline mask model without the profile was trained with the same recipe. The profile improves how well masks follow the real slices (LV r 0.64 vs 0.08) and patient LV volume (r 0.95 vs 0.45), and lowers FID from 124.3 to 119.8. Still open: repeat runs and the test sets.</td></tr>
       <tr><td><strong>RQ3.2</strong> Effect on downstream utility</td><td class="status-next">Planned</td><td>Segmentation or classification trained on real, synthetic and combined data.</td></tr>
@@ -480,7 +480,8 @@
 
 <section id="features">
   <div class="secno">06</div><h2>The 14 clinical features</h2>
-<p>The condition for the whole pipeline: how each feature is calculated from a mask, and why it describes the diagnosis.</p><details class="fold" id="features-detail"><summary><span class="ft">Equations and worked examples</span><span class="fs">height, weight, volumes, ejection fractions, ratios</span></summary><div class="fbody">
+<p>The condition for the whole pipeline: how each feature is calculated from a mask, and why it describes the diagnosis.</p><div class="note"><strong>Status, 5 Nov.</strong> The results on this page use these 14 features. Twelve more candidates (wall thickness, septal thickness and LV/RV circularity, at ED and ES) are being tested, chosen from a list of 57 literature features; which of them help is decided by experiments (see the progress log).</div>
+<details class="fold" id="features-detail"><summary><span class="ft">Equations and worked examples</span><span class="fs">height, weight, volumes, ejection fractions, ratios</span></summary><div class="fbody">
   <p>The mask model is controlled by 14 numbers that describe the heart. They are the features used to classify the five ACDC diagnoses in the challenge paper by Wolterink et al., which is why they carry the diagnosis information. Twelve of the 14 are calculated from a segmentation mask. Only height and weight come from the patient file. This section explains each one from the beginning.</p>
 
   <h4>Step 1: from a mask to a volume</h4>
@@ -580,7 +581,8 @@
     <div class="finding"><div class="n">FINDING 4</div><h3>Complete two-step generator</h3><p>Run end to end from the 14 features and noise, with no real mask or image, it scores FID 119.8 &plusmn; 2.6 and KID 0.038, the same as flow matching with real masks. The same profile with different noise gives different hearts. Failed masks still pass their errors on to the image.</p></div>
     <div class="finding"><div class="n">FINDING 5</div><h3>The profile matters</h3><p>A mask model without the clinical profile gives masks that barely follow the real slices (LV r 0.08) and lowers image quality (FID 124.3 vs 119.8). With the profile: LV r 0.64, patient LV volume r 0.95. Ejection fraction stays weak in both.</p></div>
     <div class="finding"><div class="n">FINDING 6</div><h3>Broken masks can be filtered</h3><p>Only 54% of conditioned masks pass the anatomy checks. Redrawing failing masks lifts that to 100% and keeps the profile effect.</p></div>
-    <div class="finding"><div class="n">OPEN</div><h3>Limits and next steps</h3><p>Without the filter, about half of the generated masks fail the anatomy checks and the images follow them. One training run on 15 patients, and the first memorisation check found no copying (nearest-neighbour and copy tests; membership inference still to do). Utility and privacy tests are still to do.</p></div>
+        <div class="finding"><div class="n">FINDING 7</div><h3>Better masks, but too regular</h3><p>Findings 4 to 6 use the first mask model (14 features). A newer generator (feature network with FiLM, Dice loss, 26 features) passes the anatomy checks in about 87% of the masks without any filter (real masks 93.3%), against about 40% for the same model without these changes. But the masks vary too little (spread of slice areas about half of the real one), size features are compressed and the images made from them score worse (FID 129 to 133 against 119 with real masks). Being worked on.</p></div>
+    <div class="finding"><div class="n">OPEN</div><h3>Limits and next steps</h3><p>With the first mask model about half of the generated masks failed the anatomy checks and the images followed them; the newer generator (finding 7) fails about 13%. One training run on 15 patients, and the first memorisation check found no copying (nearest-neighbour and copy tests; membership inference still to do). Utility and privacy tests are still to do.</p></div>
   </div>
   
 
@@ -892,9 +894,9 @@
   <div class="next">
     <h4>Next</h4>
     <ul class="clean" style="margin:0">
-      <li>Run the new two-step generator notebook (features and noise to mask to image in one call) and add its result and samples.</li>
-      <li>Make the flow-model result solid: repeat with other random seeds, check memorisation beyond the first test (done: no sign of copying), and retrain the GAN on all 85 patients for a fair comparison.</li>
-      <li>Improve the masks that still fail (the DCM and HCM samples, the myocardium that is too thick, the RV drawn too often), since mask errors now carry over to the image.</li>
+      <li>Flow-matching mask generator on the 26 features (running), judged on the masks: error and bias per feature, spread of slice areas, the diagnosis recovered from generated masks, and a shuffled-feature control.</li>
+      <li>Feature ablation: remove groups of features (circularity, wall thickness, septal and maximum thickness) one at a time and compare the masks. The features are chosen by these experiments.</li>
+      <li>Then the images from the best masks (FID and KID), repeating with other seeds, and the earlier open points: the check for near-identical real images, and retraining the GAN on all 85 patients.</li>
       <li>Later, once the generation part is settled: the final run on the ACDC test set, the check on M&amp;Ms, and the use of the synthetic data for classification or segmentation, plus privacy tests.</li>
     </ul>
   </div>
@@ -902,6 +904,19 @@
   <div class="log">
 
     <details class="entry" open>
+      <summary><span class="date">3 to 5 Nov 2026</span><span class="title">Feature sets and a better mask generator</span><span class="chip">RQ1.1, RQ2.1, RQ2.2</span></summary>
+      <div class="body">
+        <ul class="clean">
+          <li><strong>Feedback.</strong> The supervisor was not satisfied with the synthetic masks. The input features are to be found by experiments, the conditioning is to be checked in both directions (features to mask, and mask back to features), and the masks come first, before the images.</li>
+          <li><strong>More features.</strong> From a list of 57 literature features, 12 were kept as candidates (wall thickness mean, spread and maximum at ED and ES, septal thickness, LV and RV circularity). The others duplicate existing features, cannot be computed from ED and ES masks alone, or are noisy. Sets of 14, 22, 24 and 26 features were compared on the first mask model: the diagnosis is separated about equally well by all sets (92 to 98% in cross-validation, within noise), and the extra features alone did not raise the share of masks that pass the anatomy checks (54.6% with 14, 44 to 49% with 22 to 26).</li>
+          <li><strong>Better generator.</strong> A feature network with FiLM in every decoder block, log-transformed features, a Dice loss and a lower KL weight (all 26 features) raised the raw anatomy pass rate from about 40% to about 87% (real masks: 93.3%) and cut the redraws needed by the filter from 3.3 to 1.2 per slice. Correlation of the LV ejection fraction with the request rose from 0.64 to 0.93.</li>
+          <li><strong>Problems found.</strong> The masks are too regular: the spread of slice areas is about half of the real one, size features are compressed (LV volume calibration slope about 0.5, wall thickness about 1), and the ejection fraction is correlated with the request but biased low. Images made from the new masks scored worse (FID about 129 to 133, against 119 with real masks). A different checkpoint rule made no difference, extra variety at generation did not help, and less feature noise in training helped only partly.</li>
+          <li><strong>Next.</strong> A flow-matching mask generator on the 26 features (running), checks in both directions with error and bias per feature, a feature ablation (remove groups of features one at a time), then the images from the best masks. All on the 15 validation patients; the test sets are untouched.</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="entry">
       <summary><span class="date">2 Nov 2026 (night)</span><span class="title">Memorisation check on the flow model</span><span class="chip">RQ3.3</span></summary>
       <div class="body">
         <ul class="clean">
