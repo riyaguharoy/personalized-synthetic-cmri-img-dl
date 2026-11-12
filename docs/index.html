@@ -3,8 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Clinical-Profile-Conditioned Synthetic Cardiac MRI Generation Using Deep Generative Models</title>
-<meta name="description" content="Master's thesis project: Synthetic Cardiac MR Images and Masks Generated from a Patient's Clinical Profile. Work in progress.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Clinical-Profile-Conditioned Synthetic Cardiac MRI Generation">
+<meta property="og:description" content="Master's thesis project: synthetic cardiac MR images and masks generated from a patient's clinical profile. Work in progress.">
+<meta property="og:url" content="https://riyaguharoy.github.io/personalized-synthetic-cmri-img-dl/">
+<meta property="og:image" content="https://riyaguharoy.github.io/personalized-synthetic-cmri-img-dl/assets/social_preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://riyaguharoy.github.io/personalized-synthetic-cmri-img-dl/assets/social_preview.png">
+<title>Clinical Profile Cardiac MRI</title>
+<meta name="description" content="Master's thesis project: synthetic cardiac MR images and masks generated from a patient's clinical profile. Work in progress.">
 <style>
 /* Layout: full-screen background of real CMR tiles. The cursor spotlight swaps scan for mask. Content sits in a narrow column on translucent dark panels. */
 :root{
@@ -115,7 +124,7 @@ footer{position:relative;z-index:2;max-width:880px;margin:0 auto;padding-block:1
       <tr><td><a href="https://www.alphaxiv.org/abs/2604.12969.md" target="_blank" rel="noopener">AbdomenGen</a> (abdomen)</td><td>Body mask, one organ volume</td><td>3D diffusion U-Net with FiLM</td><td>Dice, surface distances, nearest neighbour, volume sweep</td></tr>
       <tr><td class="me"><b>This thesis</b></td><td class="me">26 mask-derived features, slice position, ED/ES</td><td class="me">Flow matching, FiLM U-Net</td><td class="me">Anatomy pass rate, requested vs measured features, diagnosis read-back, FID</td></tr>
     </tbody></table></div>
-    <p class="small" style="margin:0">None of the papers found generates cardiac masks from measured clinical features with flow matching. The search was not exhaustive (11 Nov 2026). <a href="overview_full.html#literature">Full review with all papers</a>.</p>
+    <p class="small" style="margin:0">None of the papers found generates cardiac masks from measured clinical features with flow matching. The search was not exhaustive (11 Nov 2026). <a href="literature.html">Browse the paper database</a> (24 rows with search and filters) or the <a href="overview_full.html#literature">full review text</a>.</p>
   </section>
 
   <section id="architecture">
