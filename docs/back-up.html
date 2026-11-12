@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clinical-Profile-Conditioned Synthetic Cardiac MRI Generation Using Deep Generative Models</title>
+<meta name="description" content="Master's thesis project: generating synthetic cardiac MR images and masks from a patient's clinical profile, with a two-stage pipeline. Work in progress.">
+<style>
+  :root {
+    --bg:#fbfdff; --fg:#14202b; --muted:#566370; --line:#d9e6f0;
+    --card:#ffffff; --band:#eef6fc; --accent:#0b6ea8; --accent-soft:#dcedf9;
+    --heart:#b4233c; --warn:#fdf0d5; --warn-line:#f0d9a0; --th:#e3f0fa;
+    --hero1:#e6f3fc; --hero2:#bfe0f5; --hero-fg:#0d2a42; --hero-sub:#26485f; --hero-chip:rgba(255,255,255,.7); --hero-chip-line:rgba(11,110,168,.25); --hero-stat:rgba(255,255,255,.75); --hero-statline:rgba(11,110,168,.15); --hero-statfg:#55728a; --hero-glow:rgba(11,110,168,.16); --shadow:0 1px 2px rgba(20,32,43,.06),0 6px 18px rgba(20,32,43,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0c141c; --fg:#e7edf2; --muted:#9aa9b6; --line:#25323f;
+            --card:#131d28; --band:#101923; --accent:#4fd1c0; --accent-soft:#12302f;
+            --heart:#ff6b81; --warn:#33290f; --warn-line:#5a4716; --th:#16262f;
+            --hero1:#071420; --hero2:#0d3a49; --hero-fg:#fff; --hero-sub:#cfe0e6; --hero-chip:rgba(255,255,255,.12); --hero-chip-line:rgba(255,255,255,.25); --hero-stat:rgba(8,24,38,.55); --hero-statline:rgba(255,255,255,.15); --hero-statfg:#b9ced6; --hero-glow:rgba(79,209,192,.22); --shadow:none; }
+  }
+  * { box-sizing:border-box; }
+  html { scroll-padding-top:64px; }
+  @media (prefers-reduced-motion:no-preference){ html { scroll-behavior:smooth; } }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:16px/1.7 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  a { color:var(--accent); text-underline-offset:3px; }
+  .wrap { max-width:1040px; margin:0 auto; padding:0 20px; }
+
+  header.hero { color:var(--hero-fg); padding:64px 0 0; border-bottom:4px solid var(--heart);
+                background:radial-gradient(1200px 400px at 85% -10%,var(--hero-glow),transparent 60%),
+                           linear-gradient(135deg,var(--hero1),var(--hero2)); }
+  .badge { display:inline-block; font-size:13px; letter-spacing:.02em; padding:4px 12px; border-radius:999px;
+           background:var(--hero-chip); border:1px solid var(--hero-chip-line); color:var(--hero-fg); margin-bottom:18px; }
+  h1 { font-size:clamp(1.7rem,4vw,2.6rem); line-height:1.2; margin:0 0 16px; letter-spacing:-.01em; color:var(--hero-fg); max-width:860px; }
+  .sub { color:var(--hero-sub); margin:0; max-width:780px; font-size:1.02rem; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; margin-top:40px;
+           background:var(--hero-statline); border-radius:14px 14px 0 0; overflow:hidden; }
+  .stat { background:var(--hero-stat); padding:16px 18px; }
+  a.stat { text-decoration:none; color:inherit; display:block; }
+  a.stat:hover { background:var(--hero-chip); }
+  .stat b { display:block; font-size:1.7rem; line-height:1.1; color:var(--hero-fg); }
+  .stat span { font-size:13px; color:var(--hero-statfg); }
+
+  nav { position:sticky; top:0; z-index:10; background:color-mix(in srgb,var(--bg) 92%,transparent);
+        backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
+  nav .wrap { display:flex; gap:4px; overflow-x:auto; padding-top:8px; padding-bottom:8px; scrollbar-width:none; }
+  nav a { text-decoration:none; white-space:nowrap; font-size:14.5px; color:var(--muted); padding:6px 12px; border-radius:8px; }
+  nav a:hover { color:var(--fg); background:var(--band); }
+  nav a.active { color:var(--accent); background:var(--accent-soft); font-weight:600; }
+
+  main section { padding:52px 0 12px; }
+  main section:nth-of-type(even) { background:var(--band); box-shadow:0 0 0 100vmax var(--band); clip-path:inset(0 -100vmax); }
+  h2 { font-size:1.55rem; margin:0 0 16px; letter-spacing:-.01em; display:flex; align-items:center; gap:12px; }
+  h2::before { content:""; width:6px; height:1.5rem; border-radius:3px; background:linear-gradient(var(--heart),var(--accent)); flex:none; }
+  h3 { font-size:1.08rem; margin:24px 0 8px; }
+  h4 { font-size:.98rem; margin:20px 0 8px; color:var(--muted); }
+  p { margin:0 0 14px; }
+
+  .grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
+  .card { background:var(--card); border:1px solid var(--line); border-top:3px solid var(--accent);
+          border-radius:12px; padding:18px 20px; box-shadow:var(--shadow); }
+  .card h3 { margin-top:0; }
+  .tag { font-weight:700; color:var(--heart); }
+  figure { margin:24px 0; }
+  figure img { max-width:100%; height:auto; border:1px solid var(--line); border-radius:12px; background:#fff; box-shadow:var(--shadow); }
+  figcaption { color:var(--muted); font-size:14px; margin-top:8px; }
+  .figrow { display:grid; gap:20px; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); align-items:start; }
+
+  .tablewrap { overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--card); box-shadow:var(--shadow); }
+  table { border-collapse:collapse; width:100%; font-size:14.5px; }
+  th,td { text-align:left; padding:10px 14px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { background:var(--th); font-weight:650; white-space:nowrap; color:var(--fg); font-size:13.5px; }
+  tbody tr:nth-child(even) td { background:color-mix(in srgb,var(--band) 55%,transparent); }
+  tbody tr:hover td { background:var(--accent-soft); }
+  tr:last-child td { border-bottom:none; }
+  .note { background:var(--warn); border:1px solid var(--warn-line); border-left:5px solid #d99a1b;
+          border-radius:10px; padding:13px 18px; font-size:15px; }
+  ul.clean { padding-left:20px; margin:0 0 14px; }
+  ul.clean li { margin-bottom:7px; }
+  ul.clean li::marker { color:var(--accent); }
+
+  td.status-done,td.status-now,td.status-next { font-weight:650; white-space:nowrap; }
+  td.status-done::before,td.status-now::before,td.status-next::before { content:""; display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:8px; background:currentColor; }
+  .status-done { color:#15803d; } .status-now { color:#b45309; } .status-next { color:var(--muted); }
+  @media (prefers-color-scheme: dark) { .status-done { color:#4ade80; } .status-now { color:#fbbf24; } }
+  .eq { font-family:Georgia,'Times New Roman',serif; font-style:italic; }
+  .eq sub, .eq sup { font-size:.75em; }
+  /* progress log */
+  .log { display:grid; gap:14px; }
+  details.entry { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:12px; box-shadow:var(--shadow); }
+  details.entry > summary { cursor:pointer; list-style:none; padding:14px 18px; display:flex; flex-wrap:wrap; gap:6px 12px; align-items:baseline; }
+  details.entry > summary::-webkit-details-marker { display:none; }
+  details.entry > summary::before { content:"+"; font-weight:700; color:var(--accent); width:1em; flex:none; }
+  details.entry[open] > summary::before { content:"\2212"; }
+  details.entry .date { font-size:13px; color:var(--muted); white-space:nowrap; }
+  details.entry .title { font-weight:650; }
+  details.entry .chip { font-size:12px; padding:2px 10px; border-radius:999px; background:var(--accent-soft); color:var(--accent); white-space:nowrap; }
+  details.entry .body { padding:0 18px 8px 18px; }
+  details.entry .body figure { margin:12px 0; }
+  .next { background:var(--card); border:1px solid var(--line); border-top:3px solid var(--heart); border-radius:12px; padding:14px 20px; margin-bottom:16px; box-shadow:var(--shadow); }
+  .next h3 { margin:0 0 6px; }
+  code { background:var(--accent-soft); color:var(--accent); padding:2px 7px; border-radius:6px; font-size:13.5px; }
+  footer { margin-top:64px; padding:28px 0 44px; border-top:1px solid var(--line); color:var(--muted); font-size:14px; }
+  @media (max-width:600px){ header.hero{padding-top:44px} main section{padding-top:40px} th,td{padding:8px 10px} }
+
+  /* overview page */
+  .tags { display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 0; }
+  .tags span { font-size:13px; padding:4px 12px; border-radius:999px; background:var(--hero-chip); border:1px solid var(--hero-chip-line); color:var(--hero-fg); }
+  .btns { display:flex; flex-wrap:wrap; gap:12px; margin:26px 0 0; }
+  .btn { display:inline-block; text-decoration:none; font-weight:650; padding:10px 20px; border-radius:10px; border:1px solid var(--accent); color:var(--accent); background:transparent; }
+  .btn.primary { background:var(--accent); color:#fff; }
+  @media (prefers-color-scheme: dark) { .btn.primary { color:#0c141c; } }
+  .secno { font-size:13px; font-weight:700; letter-spacing:.08em; color:var(--heart); margin-bottom:4px; }
+  .callouts { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); margin:22px 0 6px; }
+  .callout { background:var(--card); border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:12px; padding:14px 18px; box-shadow:var(--shadow); }
+  .callout b { display:block; font-size:1.55rem; line-height:1.15; }
+  .callout span { font-size:13.5px; color:var(--muted); }
+  .tabs { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 14px; }
+  .tabs button { font:inherit; font-size:14.5px; cursor:pointer; padding:8px 16px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--fg); }
+  .tabs button[aria-selected="true"] { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:650; }
+  @media (prefers-color-scheme: dark) { .tabs button[aria-selected="true"] { color:#0c141c; } }
+  .panel[hidden] { display:none; }
+  .evalgrid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
+  .stat-chip { display:inline-block; font-size:12px; padding:2px 10px; border-radius:999px; margin-bottom:8px; font-weight:650; }
+  .stat-chip.done { background:#dcfce7; color:#15803d; } .stat-chip.plan { background:var(--band); color:var(--muted); border:1px solid var(--line); }
+  @media (prefers-color-scheme: dark) { .stat-chip.done { background:#12331f; color:#4ade80; } }
+  td.best { font-weight:700; color:var(--accent); background:var(--accent-soft) !important; }
+  .findings { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); margin-top:20px; }
+  .finding { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--heart); border-radius:12px; padding:16px 20px; box-shadow:var(--shadow); }
+  .finding .n { font-weight:700; color:var(--heart); font-size:13px; letter-spacing:.06em; }
+  .finding h3 { margin:2px 0 6px; }
+  .finding p { margin:0; font-size:15px; }
+  .people { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
+  .person { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; box-shadow:var(--shadow); text-align:center; }
+  .avatar { width:64px; height:64px; border-radius:50%; margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.2rem; color:#fff; background:linear-gradient(135deg,var(--heart),var(--accent)); }
+  .person b { display:block; } .person span { font-size:14px; color:var(--muted); }
+  .linkcards { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+  .linkcards a { display:block; text-decoration:none; color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 18px; box-shadow:var(--shadow); }
+  .linkcards a:hover { border-color:var(--accent); }
+  .linkcards b { display:block; color:var(--accent); } .linkcards span { font-size:14px; color:var(--muted); }
+
+  /* merged page */
+  .tldr { background:var(--card); border:1px solid var(--line); border-left:5px solid var(--heart); border-radius:12px; padding:6px 20px 8px; margin:0 0 20px; box-shadow:var(--shadow); }
+  .tldr h3 { margin:14px 0 6px; }
+  .tldr ul { margin:0 0 10px; padding-left:20px; }
+  .tldr li { margin:6px 0; }
+  .tldr .jump { font-size:14px; color:var(--muted); margin:6px 0 10px; }
+  .tldr .jump a { white-space:nowrap; }
+  details.fold { background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); margin:16px 0; }
+  details.fold > summary { cursor:pointer; list-style:none; padding:14px 18px; display:flex; flex-wrap:wrap; gap:4px 14px; align-items:baseline; }
+  details.fold > summary::-webkit-details-marker { display:none; }
+  details.fold > summary::before { content:"+"; font-weight:700; color:var(--accent); width:1em; flex:none; }
+  details.fold[open] > summary::before { content:"\2212"; }
+  details.fold .ft { font-weight:650; }
+  details.fold .fs { font-size:13.5px; color:var(--muted); }
+  details.fold .fbody { padding:0 20px 12px; border-top:1px solid var(--line); }
+  details.fold .fbody > h4:first-child, details.fold .fbody > h3:first-child { margin-top:18px; }
+  .qa { display:grid; gap:14px; margin:18px 0; }
+  .qa .q { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:12px; padding:14px 20px; box-shadow:var(--shadow); }
+  .qa .q h3 { margin:0 0 6px; font-size:1rem; }
+  .qa .q p { margin:0 0 8px; font-size:15px; } .qa .q p:last-child { margin-bottom:0; }
+  nav a.back { margin-left:auto; }
+</style>
+<style>.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin:22px 0}.fb{flex:1 1 140px;background:var(--card);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow);text-align:center}.fb b{display:block}.fb span{font-size:13px;color:var(--muted)}.fa{align-self:center;color:var(--heart);font-weight:700;font-size:1.3rem}@media(max-width:700px){.fa{display:none}}</style>
+<style>.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin:22px 0}.fb{flex:1 1 140px;background:var(--card);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow);text-align:center}.fb b{display:block}.fb span{font-size:13px;color:var(--muted)}.fa{align-self:center;color:var(--heart);font-weight:700;font-size:1.3rem}@media(max-width:700px){.fa{display:none}}
+.model{background:var(--card);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:12px;padding:16px 20px;box-shadow:var(--shadow)}.model h3{margin:0 0 4px}.model .tg{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.model .tg span{font-size:12px;padding:2px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}.model p{font-size:15px;margin:6px 0}.sub2{font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--heart);margin:30px 0 4px;text-transform:uppercase}nav .wrap{gap:2px}.pp{font-size:11px;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}nav a{padding:6px 9px;font-size:14px}</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <span class="badge">Master's Thesis &middot; Medical Imaging &middot; 2026 &middot; Work in progress</span>
+    <h1>Clinical-Profile-Conditioned Synthetic Cardiac MRI Generation Using Deep Generative Models</h1>
+    <p class="sub">Can a patient's clinical profile steer a generator of synthetic cardiac MRI? Clinical features and noise make a heart mask, and the mask makes the image. This page shows the current state of the project.</p>
+    <div class="tags"><span>Cardiac MRI</span><span>ACDC</span><span>M&amp;Ms</span><span>Flow matching</span><span>SPADE GAN</span><span>Clinical features</span></div>
+    <div class="btns"><a class="btn primary" href="#results">View results</a><a class="btn" href="#progress">Progress</a><a class="btn" href="details.html">Full technical details</a></div>
+    <div class="stats">
+      <a class="stat" href="#pipeline"><b>26</b><span>clinical features as the condition</span></a>
+      <a class="stat" href="#pipeline"><b>2</b><span>stages: mask, then image</span></a>
+      <a class="stat" href="#comparison"><b>189 &rarr; 119</b><span>image FID, GAN to flow matching</span></a>
+      <a class="stat" href="#pipeline"><b>85 / 15</b><span>training / validation patients</span></a>
+    </div>
+  </div>
+</header>
+<nav><div class="wrap"><a href="#abstract">Abstract</a><a href="#objectives">Objectives</a><a href="#rqs">RQs</a><a href="#literature">Literature review</a><a href="#pipeline">Pipeline</a><a href="#models">Models</a><a href="#comparison">Comparison</a><a href="#results">Results</a><a href="#progress">Progress</a><a href="#team">Team</a><a href="#glossary">Glossary</a><a href="#links">Links</a></div></nav>
+<main class="wrap">
+<section id="abstract">
+  <div class="secno">01</div><h2>Research Abstract</h2>
+  <p>Deep learning for cardiac MRI needs a lot of labelled data, but scans are scarce, differ between scanners and are protected by privacy rules. Generative models can add synthetic scans, but most only control the <em>anatomy</em> of the heart, for example with a mask. This project asks whether generation can be controlled by <em>information about the patient</em>: height, weight, chamber volumes, ejection fractions and wall measures.</p>
+  <p>We use a two-stage pipeline. Stage 1 turns 26 clinical features and noise into a segmentation mask. Stage 2 turns the mask and noise into a synthetic cardiac MR image, comparing a SPADE GAN baseline with a flow matching model. The generator is judged on image quality, on whether the masks follow the profile they were given, and (still to do) on usefulness and privacy.</p>
+  <div class="callouts">
+    <div class="callout"><b>2 stages</b><span>features to mask, then mask to image</span></div>
+    <div class="callout"><b>26 features</b><span>the clinical profile used as the condition</span></div>
+    <div class="callout"><b>2 image models</b><span>SPADE GAN and flow matching</span></div>
+    <div class="callout"><b>189 &rarr; 119</b><span>image FID, GAN to flow matching</span></div>
+  </div>
+  <div class="note"><strong>Scope.</strong> A methods and data project. No clinicians, patient outcomes or clinical deployment are involved. All numbers are on 15 validation patients and single or few runs. The test sets are untouched.</div>
+</section>
+<section id="objectives">
+  <div class="secno">02</div><h2>Objectives</h2>
+  <p><strong>Main objective.</strong> Investigate how clinical-profile information can give fine-grained control over the generation of synthetic cardiac MR images together with their segmentation masks.</p>
+  <div class="qa">
+    <div class="q"><h3>O1. Build it</h3><p>Develop a baseline generative model without clinical-profile conditioning, and a conditioned version built on top of it.</p></div>
+    <div class="q"><h3>O2. Check it works</h3><p>Check that the generated images and masks keep plausible anatomy and reflect the profile they were conditioned on.</p></div>
+    <div class="q"><h3>O3. Compare it</h3><p>Compare the conditioned model with the baseline on fidelity, downstream utility and privacy.</p></div>
+  </div>
+</section>
+<section id="rqs">
+  <div class="secno">03</div><h2>Research Questions</h2>
+<div class="tablewrap"><table><thead><tr><th>Question</th><th>Status</th><th>Answer so far</th></tr></thead><tbody><tr><td><b>RQ1.1</b> What clinical information is available and suitable for conditioning?</td><td>In progress</td><td>ACDC has diagnosis, height and weight. M&amp;Ms adds age and sex. Features calculated from the masks are used as the condition (26 now). The feature set is still being evaluated.</td></tr><tr><td><b>RQ1.2</b> How can it be built into generating images and masks?</td><td>Built</td><td>A two-stage pipeline, run end to end: features and noise to a mask to an image.</td></tr><tr><td><b>RQ2.1</b> Do generated images and masks keep plausible anatomy?</td><td>Measured</td><td>68% of first-draw masks pass the anatomy checks (93% of real ones). With the filter (up to 20 redraws) 99.9% pass. The checks cover structure only, not clinical realism.</td></tr><tr><td><b>RQ2.2</b> Do they reflect the clinical profile?</td><td>Measured</td><td>Yes for size and volumes, moderate for ejection fraction, weak for fine wall details (see Results).</td></tr><tr><td><b>RQ3.1</b> Effect of conditioning on fidelity and anatomy, against a baseline without it</td><td>Measured (one run)</td><td>The profile improves how masks follow real slices (LV r 0.64 vs 0.08) and lowers FID (124.3 to 119.8). Repeats and test sets still open.</td></tr><tr><td><b>RQ3.2</b> Effect on downstream utility</td><td>Planned</td><td>Segmentation trained on real, synthetic and combined data.</td></tr><tr><td><b>RQ3.3</b> Effect on privacy</td><td>First check done</td><td>No exact copies of training images found. Membership-inference tests still to do.</td></tr></tbody></table></div>
+</section>
+<section id="literature">
+  <div class="secno">04</div><h2>Literature Review</h2>
+  <p>A targeted review of how masks and cardiac anatomy are generated from conditions, with the stage 1 problem of this thesis (<em>features to mask</em>) in focus. The papers from the project proposal are marked <span class="pp">proposal</span>. None of the papers found generates cardiac masks from measured clinical features with flow matching, and neither CHeart nor CAN-FLOW checks memorisation.</p>
+  <div class="sub2">4.1 Feature-to-mask generation: methods at a glance</div>
+  <div class="tablewrap"><table><thead><tr><th>Method</th><th>How the condition makes the shape</th><th>Papers</th><th>Notes</th></tr></thead><tbody><tr><td>Conditional VAE</td><td>Encoder and decoder with the features as condition. Sample the latent to get a new shape</td><td><a href="https://rd.springer.com/chapter/10.1007/978-3-030-93722-5_9" target="_blank" rel="noopener">Beetz</a>, <a href="https://arxiv.org/abs/2301.13098" target="_blank" rel="noopener">CHeart</a>, <a href="https://papers.miccai.org/miccai-2025/paper/2701_paper.pdf" target="_blank" rel="noopener">4D CardioSynth</a>, our first mask model (14 features)</td><td>Our first VAE: smooth, too regular masks. A size sweep hardly changed them, precise on feature values (mean r 0.88)</td></tr><tr><td>Normalizing flow</td><td>Invertible network maps a Gaussian, whose mean and spread depend on the condition, to a latent code of the shape</td><td><a href="https://arxiv.org/abs/2608.09460" target="_blank" rel="noopener">CAN-FLOW</a></td><td>Healthy UK Biobank only, static ED anatomy (stated by the authors)</td></tr><tr><td>Diffusion</td><td>Denoise from noise with the condition added in the network. One scalar through FiLM in AbdomenGen</td><td><a href="https://www.alphaxiv.org/abs/2604.12969.md" target="_blank" rel="noopener">AbdomenGen</a>, <a href="https://arxiv.org/abs/2209.08256v1" target="_blank" rel="noopener">brainSPADE</a> labels, <a href="https://arxiv.org/abs/2507.00377" target="_blank" rel="noopener">MedDiff-FT</a>, <a href="https://arxiv.org/html/2501.09008v1" target="_blank" rel="noopener">SimGen</a>, <a href="https://arxiv.org/abs/2603.04340" target="_blank" rel="noopener">Edirisooriya</a> (masks)</td><td>Only AbdomenGen conditions on a measured quantity (organ volume). The others are unconditional or text or mask guided</td></tr><tr><td>Flow matching</td><td>Learn the velocity that carries noise to the mask. Condition through FiLM and classifier-free guidance</td><td><a href="https://arxiv.org/abs/2604.02868" target="_blank" rel="noopener">AlignFlow</a> (not feature conditioned), this thesis</td><td>Our flow generator: varied masks that scale with size. Needs the anatomy filter (68% first-draw pass)</td></tr><tr><td>Conditional GAN</td><td>Generator trained against a discriminator, with the condition in both</td><td><a href="https://pubmed.ncbi.nlm.nih.gov/36174308/" target="_blank" rel="noopener">Amirrajab 2022</a> and <a href="https://arxiv.org/abs/2209.04223" target="_blank" rel="noopener">2023</a>, <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC9537599" target="_blank" rel="noopener">Campello 2022</a></td><td>These generate images from labels or age, not masks from features</td></tr></tbody></table></div>
+  <div class="sub2">4.2 Cardiac anatomy generated from patient information</div>
+  <div class="tablewrap"><table><thead><tr><th>Paper</th><th>Generates</th><th>Input features</th><th>Generator</th><th>Evaluation metrics</th></tr></thead><tbody><tr><td><a href="https://rd.springer.com/chapter/10.1007/978-3-030-93722-5_9" target="_blank" rel="noopener">Beetz et al. 2021</a></td><td>3D biventricular point clouds</td><td>Subpopulation characteristics</td><td>Conditional (&beta;-)VAE</td><td>Chamfer distance, volumes against reference values and latent variation</td></tr><tr><td><a href="https://arxiv.org/abs/2301.13098" target="_blank" rel="noopener">CHeart, Qiao et al.</a></td><td>4D cardiac segmentations</td><td>Age, gender, weight, height, systolic blood pressure</td><td>Conditional &beta;-VAE with LSTM</td><td>Dice, Hausdorff and ASSD, plus LV mass and ED/ES volumes by KL and Wasserstein distance</td></tr><tr><td><a href="https://arxiv.org/abs/2608.09460" target="_blank" rel="noopener">CAN-FLOW, Kevopoulos et al.</a></td><td>ED biventricular shapes</td><td>Sex, age, BMI</td><td>Autoencoder + conditional normalizing flow</td><td>KL and Wasserstein on 6 phenotypes, variability ratio, coverage and minimum matching distance</td></tr><tr><td><a href="https://papers.miccai.org/miccai-2025/paper/2701_paper.pdf" target="_blank" rel="noopener">4D CardioSynth, Dou et al.</a></td><td>Dynamic biventricular meshes</td><td>ED bi-ventricle mesh</td><td>Factorised VAE with recurrent module</td><td>Specificity, diversity, generalisability, temporal error, LV volume over time</td></tr><tr><td class="best"><b>This thesis</b></td><td class="best">Cardiac masks, then images</td><td class="best">26 mask-derived features, height, weight, slice position, ED/ES flag</td><td class="best">Flow matching, FiLM U-Net, classifier-free guidance</td><td class="best">Anatomy pass rate, slice-area correlation, requested vs measured features, LV EF error, diagnosis read-back and FID of images</td></tr></tbody></table></div>
+  <div class="sub2">4.3 Cardiac image generation guided by masks, pathology or a profile</div>
+  <div class="tablewrap"><table><thead><tr><th>Paper</th><th>Generates</th><th>Input features</th><th>Generator</th><th>Evaluation metrics</th></tr></thead><tbody><tr><td><a href="https://pubmed.ncbi.nlm.nih.gov/36174308/" target="_blank" rel="noopener">Amirrajab et al. 2022, label-informed</a> <span class="pp">proposal</span></td><td>CMR images with image-label pairs</td><td>Multi-tissue segmentation masks (labels)</td><td>Mask-conditional GAN</td><td>Dice and Hausdorff distance of cavity segmentation with synthetic data only and as augmentation. Image-quality metrics not named in the abstract</td></tr><tr><td><a href="https://arxiv.org/abs/2209.04223" target="_blank" rel="noopener">Amirrajab et al. 2023, pathology</a> <span class="pp">proposal</span></td><td>Pathological CMR, 3D-consistent by stacking 2D slices</td><td>Label maps, deformed by VAE latent interpolation</td><td>VAE + label-conditional GAN</td><td>Quantitative test in a segmentation augmentation scenario, metrics not stated on the page</td></tr><tr><td><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC9537599" target="_blank" rel="noopener">Campello et al. 2022, cardiac aging</a> <span class="pp">proposal</span></td><td>Older or younger four-chamber ED image</td><td>Age difference to target age (BMI in a variant)</td><td>U-Net-style GAN, WGAN-GP with cycle consistency</td><td>Age MAE of a ResNet18, FID, PSNR, LV size, septum width and EF from segmentations, and an augmentation test</td></tr><tr><td><a href="https://arxiv.org/abs/2505.03426" target="_blank" rel="noopener">Li et al. 2025, phenotype-guided</a> <span class="pp">proposal</span></td><td>Four-chamber CMR cine sequences</td><td>82 cardiac phenotypes (LVEF, LVEDV, LV mass, RVEDV, RVEF and more), with no masks</td><td>VAE for phenotypes, then 3D-VAE + masked autoregressive transformer</td><td>FID, FVD, disease classification (ACC, AUC), phenotype regression (MAE, R&sup2;)</td></tr><tr><td><a href="https://arxiv.org/abs/2403.19508" target="_blank" rel="noopener">Skorupko et al. 2025, fairness-aware</a> <span class="pp">proposal</span></td><td>CMR images</td><td>Text from sex, age, BMI and condition, plus RV, LV and myocardium masks</td><td>ControlNet on Stable Diffusion 2.1</td><td>FID and balanced accuracy of a heart-failure classifier</td></tr><tr><td><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7542728" target="_blank" rel="noopener">Diller et al. 2020</a> <span class="pp">proposal</span></td><td>Artificial short- and long-axis CMR frames (repaired tetralogy of Fallot)</td><td>Latent vector only (64-d), no clinical conditions</td><td>Progressive GAN (Wasserstein)</td><td>Observer test of real vs synthetic, multi-scale sliced Wasserstein distance, and Dice and area variability of U-Net segmentation</td></tr><tr><td><a href="https://arxiv.org/abs/2603.04340" target="_blank" rel="noopener">Edirisooriya et al. 2026</a> <span class="pp">proposal</span></td><td>Masks (DDPM), then CMR images from the masks</td><td>Masks only, no clinical features</td><td>DDPM, latent diffusion and flow matching compared</td><td>Fidelity: SSIM, MS-SSIM, PSNR, FID, KID, LPIPS. Utility: Dice, IoU, HD95, ASD with DynUNet. Privacy: nearest-neighbour (L2, LPIPS, NNDR) and membership inference AUC</td></tr><tr><td><a href="https://arxiv.org/abs/2608.24342" target="_blank" rel="noopener">Rodriguez et al. 2026</a></td><td>CMR slices</td><td>Pathology, BMI group, sex, age group, slice position as text</td><td>Stable Diffusion v1-4, fine-tuned</td><td>MAE, MS-SSIM, FID, Frechet Radiomics Distance, diversity, subgroup FID</td></tr><tr><td><a href="https://arxiv.org/abs/2402.05210" target="_blank" rel="noopener">Konz et al. 2024</a></td><td>Image from a mask (breast MRI, CT)</td><td>Multi-class segmentation mask</td><td>Image-space diffusion (UNet, DDIM)</td><td>Dice of a segmenter on generated images, with training on synthetic and testing on real</td></tr><tr><td><a href="https://arxiv.org/abs/2209.08256v1" target="_blank" rel="noopener">brainSPADE, Fernandez et al.</a></td><td>Brain label maps, then images</td><td>Label maps, with or without pathology, no clinical features</td><td>Diffusion label generator + SPADE-type image model</td><td>Segmentation trained on synthetic vs real (metrics not checked)</td></tr></tbody></table></div>
+  <div class="sub2">4.4 Mask generators outside cardiac</div>
+  <div class="tablewrap"><table><thead><tr><th>Paper</th><th>Generates</th><th>Input features</th><th>Generator</th><th>Evaluation metrics</th></tr></thead><tbody><tr><td><a href="https://www.alphaxiv.org/abs/2604.12969.md" target="_blank" rel="noopener">AbdomenGen, Bhandari et al.</a></td><td>Abdominal organ shapes (CT)</td><td>Body-mask field, context field, one organ-volume scalar</td><td>Per-organ 3D diffusion U-Net with FiLM</td><td>Dice, ASSD, HD95, Chamfer, nearest-training-neighbour distance, diversity and volume change over a sweep</td></tr><tr><td><a href="https://arxiv.org/html/2504.06897v1" target="_blank" rel="noopener">MedSegFactory, Mao et al.</a></td><td>Image-mask pairs</td><td>Text prompt: label, modality, region, pathology</td><td>Dual-stream Stable Diffusion with joint cross-attention</td><td>IS, FID, Dice and IoU of segmentation</td></tr><tr><td><a href="https://arxiv.org/abs/2507.00377" target="_blank" rel="noopener">MedDiff-FT, Xie et al.</a></td><td>Lesion image-mask pairs</td><td>Text trigger word, background image, guiding mask</td><td>Fine-tuned Stable Diffusion 1.5 + small DDPM mask generator</td><td>Dice of downstream segmentation and a DINOv2 filter</td></tr><tr><td><a href="https://arxiv.org/html/2501.09008v1" target="_blank" rel="noopener">SimGen, Bhat et al.</a></td><td>Surgical image-mask pairs</td><td>None (unconditional)</td><td>DDPM ResUNet on image + mask channels</td><td>FID, KID, semantic FID/KID and IoU of downstream segmentation</td></tr><tr><td><a href="https://arxiv.org/abs/2604.02868" target="_blank" rel="noopener">AlignFlow, Yang et al.</a></td><td>Images and masks</td><td>A few target-domain reference images</td><td>Flow matching (images and masks)</td><td>mDice and mIoU of segmentation trained on synthetic data</td></tr></tbody></table></div>
+  <div class="sub2">4.5 Reviews and evaluation studies</div>
+  <div class="tablewrap"><table><thead><tr><th>Paper</th><th>Generates</th><th>Input features</th><th>Generator</th><th>Evaluation metrics</th></tr></thead><tbody><tr><td><a href="https://pubmed.ncbi.nlm.nih.gov/35276550/" target="_blank" rel="noopener">Chen et al. 2022, GAN review</a> <span class="pp">proposal</span></td><td>Review of GANs for medical image augmentation</td><td>&ndash;</td><td>GANs</td><td>&ndash;</td></tr><tr><td><a href="https://arxiv.org/abs/2211.07804" target="_blank" rel="noopener">Kazerouni et al. 2023, diffusion survey</a> <span class="pp">proposal</span></td><td>Review of diffusion models in medical imaging</td><td>&ndash;</td><td>Diffusion models</td><td>&ndash;</td></tr><tr><td><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11826350" target="_blank" rel="noopener">Hosseini and Serag 2025</a> <span class="pp">proposal</span></td><td>Study of whether synthetic images keep clinical biomarkers, several modalities</td><td>Not checked</td><td>Diffusion models (per the title)</td><td>Biomarker preservation, other metrics not checked</td></tr><tr><td><a href="https://arxiv.org/abs/2603.24764" target="_blank" rel="noopener">Kumarasinghe et al. 2026, survey</a> <span class="pp">proposal</span></td><td>Review of synthetic cardiac MRI generation</td><td>&ndash;</td><td>GANs, VAEs, diffusion, flow matching</td><td>Utility (segmentation) and privacy (membership inference, nearest neighbour, differential privacy), with fidelity named but metrics not specified</td></tr></tbody></table></div>
+  <div class="note"><strong>How these were read.</strong> CHeart and CAN-FLOW in full, the others from the abstract or first page, so some cells say not checked. Hosseini and Serag, Chen and Kazerouni were not opened (pages blocked, or only the title checked) and are described as in the proposal. The proposal also cites the basic model papers (GAN, VAE, DDPM, normalizing flow) and the dataset papers. They are in the proposal reference list. The search was not exhaustive (11 Nov 2026).</div>
+</section>
+<section id="pipeline">
+  <div class="secno">05</div><h2>System Pipeline</h2>
+  <div class="grid">
+    <div class="card"><h3>Stage 1: features to mask</h3><p><a href="#features">26 clinical features</a>, the slice position, ED or ES, and noise go into a <strong>flow matching</strong> mask generator. A filter redraws masks with broken anatomy.</p></div>
+    <div class="card"><h3>Stage 2: mask to image</h3><p>The mask and noise go into an image model: a <strong>SPADE GAN</strong> baseline, and a <strong>flow matching</strong> image model.</p></div>
+    <div class="card"><h3>Checks</h3><p>Image quality (FID, KID), anatomy checks, whether the masks follow the requested features, then usefulness and privacy.</p></div>
+  </div>
+  <div class="flow"><div class="fb"><b>26 clinical features</b><span>+ slice position, ED/ES, noise</span></div><div class="fa">&rarr;</div><div class="fb"><b>Mask generator</b><span>flow matching + anatomy filter</span></div><div class="fa">&rarr;</div><div class="fb"><b>Mask</b><span>RV, myocardium, LV</span></div><div class="fa">&rarr;</div><div class="fb"><b>Image model</b><span>SPADE GAN or flow matching</span></div><div class="fa">&rarr;</div><div class="fb"><b>Synthetic MRI</b><span>image + mask</span></div></div>
+  <h3>Data</h3>
+  <div class="tablewrap"><table><thead><tr><th>Dataset</th><th>Used for</th><th>Size</th><th>Clinical information</th></tr></thead><tbody><tr><td><b>ACDC</b></td><td>Training and validation: 85 / 15 patients. Test set untouched.</td><td>100 labelled patients, 1,902 slices, 5 groups of 20 (normal, MINF, DCM, HCM, RV)</td><td>Diagnosis, height, weight</td></tr><tr><td><b>M&amp;Ms</b></td><td>External test set, not yet used</td><td>345 cases with masks, 7,908 slices, several scanners and centres</td><td>Pathology, age, sex, weight</td></tr></tbody></table></div>
+  <h3>Clinical features</h3>
+  <details class="fold" id="features"><summary><span class="ft">The 26 clinical features</span><span class="fs">equations and worked examples</span></summary><div class="fbody">
+  <h4 style="margin-top:14px">Why these 26</h4>
+  <ul class="clean">
+    <li><strong>The first 14</strong> are the features used to classify the five ACDC diagnoses in the challenge paper by Wolterink et al.: height, weight, volumes, ejection fractions and ratios. They carry the diagnosis information.</li>
+    <li><strong>The 12 added</strong> (wall thickness, septal thickness, circularity) were picked from a list of 57 features in the literature, after the first masks were judged too regular. They describe wall and shape, which the first 14 only cover indirectly (for example, a thick wall in HCM or a rounder, dilated LV in DCM).</li>
+    <li><strong>Rule for every feature:</strong> it must be calculable from a mask alone, so it can be measured again on a generated mask and the mask checked against the value it was given.</li>
+    <li><strong>Test:</strong> groups of features were removed one at a time. Septal thickness and wall-thickness spread helped their own control, and circularity carried some diagnosis signal (78% read-back without it, 89% with it). Mean and maximum thickness gave no clear gain but did no harm, so all 26 were kept.</li>
+  </ul>
+  <p style="margin-top:14px">14 features were used first and 12 (wall thickness and shape, rows 15 to 26) were added on 3 to 5 November. All except height and weight are calculated from the segmentation mask, so they can be measured on generated masks in exactly the same way. All examples use round numbers, not a real patient.</p>
+
+  <h4>Step 1: from a mask to a volume</h4>
+  <p>A mask labels every pixel as background, right ventricle (RV), myocardium (MYO) or left ventricle (LV). A volume is the number of pixels with a label, summed over all slices of a phase, times the volume of one voxel. ED is end-diastole (heart full), ES is end-systole (heart squeezed).</p>
+  <p class="eq" style="text-align:center;font-size:1.1rem">V<sub>k</sub><sup>ph</sup> = N<sub>k</sub><sup>ph</sup> &times; &Delta;x &times; &Delta;y &times; &Delta;z &divide; 1000</p>
+  <p>N is the pixel count, &Delta;x = &Delta;y = 1.5 mm, &Delta;z is the slice thickness (for example 10 mm), and dividing by 1000 turns mm&sup3; into mL.</p>
+  <p><strong>Example.</strong> 5,000 LV pixels at ED and 10 mm slices: one voxel is 1.5 &times; 1.5 &times; 10 = 22.5 mm&sup3;, so V<sub>LV</sub><sup>ED</sup> = 5,000 &times; 22.5 &divide; 1000 = <strong>112.5 mL</strong>. With 2,000 LV pixels at ES: V<sub>LV</sub><sup>ES</sup> = <strong>45 mL</strong>.</p>
+
+  <h4>Step 2: ejection fractions and ratios</h4>
+  <p><strong>Example.</strong> EF<sub>LV</sub> = 100 &times; (112.5 &minus; 45) &divide; 112.5 = <strong>60%</strong>. If the RV volume at ED is 100 mL, the RV/LV ratio at ED is 100 &divide; 112.5 = <strong>0.89</strong>. If the myocardium volume at ED is 90 mL, the myocardium/LV ratio is 90 &divide; 112.5 = <strong>0.80</strong>.</p>
+
+  <h4>Step 3: wall thickness</h4>
+  <p>On each slice the myocardium is thinned to its centre line. For each centre-line pixel, thickness is t = 2 &times; d &times; 1.5 mm, where d is the distance in pixels to the nearest edge of the myocardium. All centre-line values of all slices in a phase are pooled, then the mean, standard deviation and maximum are taken. Septal thickness uses only the centre-line pixels within 4 pixels of the RV.</p>
+  <p><strong>Example.</strong> A centre-line pixel with d = 4 pixels has t = 2 &times; 4 &times; 1.5 = 12 mm. If the pooled values were 10, 12 and 14 mm, the mean is <strong>12 mm</strong>, the spread (SD) is &radic;((4 + 0 + 4) &divide; 3) = <strong>1.6 mm</strong> and the maximum is <strong>14 mm</strong>.</p>
+
+  <h4>Step 4: circularity</h4>
+  <p>For the largest region of the LV (or RV) on a slice, C = 4&pi; &times; area &divide; perimeter&sup2;. A perfect circle gives 1, and elongated or irregular shapes give less. The value is averaged over the slices where the structure is present.</p>
+  <p><strong>Example.</strong> A circle of radius 20 pixels has area &pi; &times; 20&sup2; = 1,257 and perimeter 2&pi; &times; 20 = 125.7, so C = 4&pi; &times; 1,257 &divide; 125.7&sup2; = <strong>1.00</strong>. An irregular region with area 1,000 and perimeter 140 gives 4&pi; &times; 1,000 &divide; 19,600 = <strong>0.64</strong>.</p>
+
+  <h4>All 26 features</h4>
+  <div class="tablewrap"><table><thead><tr><th>#</th><th>Feature</th><th>Equation</th><th>In words</th></tr></thead><tbody><tr><td>1</td><td><b>Height</b></td><td class="eq">H (cm)</td><td>From the patient file.</td></tr><tr><td>2</td><td><b>Weight</b></td><td class="eq">W (kg)</td><td>From the patient file.</td></tr><tr><td>3</td><td><b>LV volume, ED</b></td><td class="eq">V<sub>LV</sub><sup>ED</sup></td><td>Step 1 above.</td></tr><tr><td>4</td><td><b>LV volume, ES</b></td><td class="eq">V<sub>LV</sub><sup>ES</sup></td><td>Step 1 above.</td></tr><tr><td>5</td><td><b>RV volume, ED</b></td><td class="eq">V<sub>RV</sub><sup>ED</sup></td><td>Step 1 above.</td></tr><tr><td>6</td><td><b>RV volume, ES</b></td><td class="eq">V<sub>RV</sub><sup>ES</sup></td><td>Step 1 above.</td></tr><tr><td>7</td><td><b>Myocardium volume, ED</b></td><td class="eq">V<sub>MYO</sub><sup>ED</sup></td><td>Step 1 above.</td></tr><tr><td>8</td><td><b>Myocardium volume, ES</b></td><td class="eq">V<sub>MYO</sub><sup>ES</sup></td><td>Step 1 above.</td></tr><tr><td>9</td><td><b>LV ejection fraction</b></td><td class="eq">EF<sub>LV</sub> = 100 &times; (V<sub>LV</sub><sup>ED</sup> &minus; V<sub>LV</sub><sup>ES</sup>) &divide; V<sub>LV</sub><sup>ED</sup></td><td>Percentage of the LV blood pumped out in one beat.</td></tr><tr><td>10</td><td><b>RV ejection fraction</b></td><td class="eq">EF<sub>RV</sub> = 100 &times; (V<sub>RV</sub><sup>ED</sup> &minus; V<sub>RV</sub><sup>ES</sup>) &divide; V<sub>RV</sub><sup>ED</sup></td><td>The same for the RV.</td></tr><tr><td>11</td><td><b>RV/LV ratio, ED</b></td><td class="eq">V<sub>RV</sub><sup>ED</sup> &divide; V<sub>LV</sub><sup>ED</sup></td><td>One volume divided by the LV volume in the same phase.</td></tr><tr><td>12</td><td><b>RV/LV ratio, ES</b></td><td class="eq">V<sub>RV</sub><sup>ES</sup> &divide; V<sub>LV</sub><sup>ES</sup></td><td>One volume divided by the LV volume in the same phase.</td></tr><tr><td>13</td><td><b>Myocardium/LV ratio, ED</b></td><td class="eq">V<sub>MYO</sub><sup>ED</sup> &divide; V<sub>LV</sub><sup>ED</sup></td><td>One volume divided by the LV volume in the same phase.</td></tr><tr><td>14</td><td><b>Myocardium/LV ratio, ES</b></td><td class="eq">V<sub>MYO</sub><sup>ES</sup> &divide; V<sub>LV</sub><sup>ES</sup></td><td>One volume divided by the LV volume in the same phase.</td></tr><tr><td>15</td><td><b>Wall thickness mean, ED</b></td><td class="eq">t&#772;<sup>ED</sup></td><td>Step 3 above.</td></tr><tr><td>16</td><td><b>Wall thickness mean, ES</b></td><td class="eq">t&#772;<sup>ES</sup></td><td>Step 3 above.</td></tr><tr><td>17</td><td><b>Wall thickness spread (SD), ED</b></td><td class="eq">SD(t)<sup>ED</sup></td><td>Step 3 above.</td></tr><tr><td>18</td><td><b>Wall thickness spread (SD), ES</b></td><td class="eq">SD(t)<sup>ES</sup></td><td>Step 3 above.</td></tr><tr><td>19</td><td><b>Wall thickness maximum, ED</b></td><td class="eq">max(t)<sup>ED</sup></td><td>Step 3 above.</td></tr><tr><td>20</td><td><b>Wall thickness maximum, ES</b></td><td class="eq">max(t)<sup>ES</sup></td><td>Step 3 above.</td></tr><tr><td>21</td><td><b>Septal thickness mean, ED</b></td><td class="eq">t&#772;<sub>sept</sub><sup>ED</sup></td><td>Step 3, only next to the RV.</td></tr><tr><td>22</td><td><b>Septal thickness mean, ES</b></td><td class="eq">t&#772;<sub>sept</sub><sup>ES</sup></td><td>Step 3, only next to the RV.</td></tr><tr><td>23</td><td><b>LV circularity, ED</b></td><td class="eq">C<sub>LV</sub><sup>ED</sup> = 4&pi;A &divide; P&sup2;</td><td>Step 4 above.</td></tr><tr><td>24</td><td><b>LV circularity, ES</b></td><td class="eq">C<sub>LV</sub><sup>ES</sup> = 4&pi;A &divide; P&sup2;</td><td>Step 4 above.</td></tr><tr><td>25</td><td><b>RV circularity, ED</b></td><td class="eq">C<sub>RV</sub><sup>ED</sup> = 4&pi;A &divide; P&sup2;</td><td>Step 4 above.</td></tr><tr><td>26</td><td><b>RV circularity, ES</b></td><td class="eq">C<sub>RV</sub><sup>ES</sup> = 4&pi;A &divide; P&sup2;</td><td>Step 4 above.</td></tr></tbody></table></div>
+  <p style="margin-top:12px">Skewed features are log-transformed and all are standardised before they enter the model. All 26 were kept after removing groups in a test: dropping circularity gave no gain and lowered the diagnosis read-back from the masks (78% against 89%). See the <a href="details.html#results">full details</a>.</p>
+  </div></details>
+
+</section>
+<section id="models">
+  <div class="secno">06</div><h2>Generative Models Benchmarked</h2>
+  <div class="grid">
+    <div class="model"><h3>Conditional VAE <small>(mask, first version)</small></h3><div class="tg"><span>Stage 1</span><span>2.2 M parameters</span></div><p>Encoder and decoder with the features as condition. Smooth masks that are too regular, and a size sweep hardly changes them. Page: <a href="models/mask-vae.html">architecture</a>.</p></div>
+    <div class="model"><h3>Flow matching mask generator</h3><div class="tg"><span>Stage 1</span><span>6.4 M parameters</span><span>chosen</span></div><p>FiLM U-Net, classifier-free guidance, 50 Euler steps, 26 features. More varied masks that scale with size. Needs the anatomy filter.</p></div>
+    <div class="model"><h3>SPADE GAN</h3><div class="tg"><span>Stage 2</span><span>baseline</span></div><p>Generator that feeds the mask into every block, trained against a discriminator. Page: <a href="models/spade-gan.html">architecture</a>.</p></div>
+    <div class="model"><h3>Flow matching image model</h3><div class="tg"><span>Stage 2</span><span>24.7 M parameters</span><span>best FID</span></div><p>Velocity U-Net with the mask added in every block, classifier-free guidance, 50 steps. Page: <a href="models/flow-model.html">architecture</a>.</p></div>
+  </div>
+  <div class="figrow">
+    <figure><a href="assets/mask_vae_architecture.png" target="_blank" rel="noopener"><img src="assets/mask_vae_architecture.png" alt="Stage 1, conditional VAE (first version, 14 features)."></a><figcaption>Stage 1, conditional VAE (first version, 14 features).</figcaption></figure>
+    <figure><a href="assets/flow_architecture.png" target="_blank" rel="noopener"><img src="assets/flow_architecture.png" alt="Stage 2, flow matching image model."></a><figcaption>Stage 2, flow matching image model.</figcaption></figure>
+  </div>
+  <figure><a href="assets/spade_architecture.png" target="_blank" rel="noopener"><img src="assets/spade_architecture.png" alt="Stage 2 baseline, SPADE GAN."></a><figcaption>Stage 2 baseline, SPADE GAN.</figcaption></figure>
+</section>
+<section id="comparison">
+  <div class="secno">07</div><h2>Results &amp; Comparative Analysis</h2>
+  <h3>Image models (lower is better)</h3>
+  <div class="tablewrap"><table><thead><tr><th>Image model</th><th>Masks given</th><th>FID &darr;</th><th>KID &darr;</th></tr></thead><tbody><tr><td>SPADE GAN (baseline)</td><td>real</td><td>189.5</td><td>0.122</td></tr><tr><td>Flow matching</td><td>real</td><td class="best">118.8</td><td class="best">0.040</td></tr><tr><td>Flow matching</td><td>generated from the 26 features, with filter</td><td class="best">118.1</td><td class="best">0.039</td></tr><tr><td>Floor: real vs real images</td><td>&ndash;</td><td>99.0</td><td>0.005</td></tr></tbody></table></div>
+  <h3>Mask generators: VAE against flow matching</h3>
+  <div class="tablewrap"><table><thead><tr><th></th><th>VAE</th><th>Flow matching</th></tr></thead><tbody><tr><td>Anatomy checks passed, first draw (real masks 93%)</td><td class="best">92%</td><td>77%</td></tr><tr><td>Slice-area correlation, RV / MYO / LV</td><td>0.59 / 0.83 / 0.86</td><td class="best">0.82 / 0.88 / 0.91</td></tr><tr><td>Slice-area spread, generated SD / real SD (1 = same)</td><td>0.67 / 0.89 / 0.80</td><td class="best">1.12 / 1.14 / 1.09</td></tr><tr><td>Variety between draws (Dice, lower = more varied)</td><td>0.94</td><td class="best">0.85</td></tr><tr><td>Images from the masks with filter, FID (real masks 119.9)</td><td>130.6</td><td class="best">116.7</td></tr><tr><td>Follows requested feature values (mean r over features)</td><td class="best">0.88</td><td>0.79 to 0.84</td></tr></tbody></table></div>
+  <p style="margin-top:12px">Flow gives realistic slice sizes and variety, and images as good as real masks. The VAE is more precise on feature values. Flow was chosen for realism and image quality.</p>
+  <h3>With and without the clinical profile</h3>
+  <div class="tablewrap"><table><thead><tr><th></th><th>Without profile</th><th>With profile</th></tr></thead><tbody><tr><td>LV area correlation with the real slice</td><td>0.08</td><td class="best">0.64</td></tr><tr><td>Patient LV volume, correlation</td><td>0.45</td><td class="best">0.95</td></tr><tr><td>Image FID</td><td>124.3</td><td class="best">119.8</td></tr></tbody></table></div>
+  <h3>22 features (no circularity) against all 26</h3>
+  <div class="tablewrap"><table><thead><tr><th></th><th>22 features</th><th>26 features</th></tr></thead><tbody><tr><td>Diagnosis read back from the masks (real features 93%)</td><td>78%</td><td class="best">89%</td></tr><tr><td>LV ejection fraction, correlation</td><td>0.91</td><td class="best">0.92</td></tr><tr><td>Image FID</td><td class="best">117.6</td><td>118.1</td></tr></tbody></table></div>
+  <p style="margin-top:12px">FID differences below about 2 are seed noise, and one validation patient is 6.7 diagnosis points. <a href="details.html#results">All tables and runs</a></p>
+</section>
+<section id="results">
+  <div class="secno">08</div><h2>Results</h2>
+  <div class="findings">
+    <div class="finding"><div class="n">FINDING 1</div><h3>Flow matching is much better</h3><p>FID falls from 189.5 to 118.8: about 20 points above the real-vs-real floor, against about 90 for the GAN.</p></div>
+    <div class="finding"><div class="n">FINDING 2</div><h3>The full generator works</h3><p>From features and noise alone, with no real mask or image, images score as well as with real masks.</p></div>
+    <div class="finding"><div class="n">FINDING 3</div><h3>The features steer the masks</h3><p>Masks follow the features they are given (correlation 0.76) and not the patient's own (&minus;0.17).</p></div>
+    <div class="finding"><div class="n">FINDING 4</div><h3>Precision varies by feature</h3><p>Strong for size and volumes, moderate for ejection fraction, weak for fine wall details.</p></div>
+  </div>
+  <h3>Do the generated masks follow the clinical features?</h3>
+  <p>Final mask generator, 15 unseen validation patients.</p>
+  <div class="tablewrap"><table><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody><tr><td>Fed features vs own features (shuffle control, correlation)</td><td>0.76 vs &minus;0.17: the masks follow the requested features</td></tr><tr><td>Size sweep, all volumes &times;0.6 to &times;1.6</td><td>LV area grows steadily, 711 to 940 px</td></tr><tr><td>EF sweep, 20% to 70%</td><td>End-systolic LV area shrinks steadily, 584 to 350 px</td></tr><tr><td>Diagnosis read back from the masks (real features: 93%)</td><td>89%</td></tr><tr><td>Anatomy checks on first draws</td><td>68% pass, the filter redraws the rest (apex slices worst, 61%)</td></tr><tr><td>Ejection fractions</td><td>Pulled towards the average. RV EF weakest (slope 0.35)</td></tr><tr><td>Very small hearts</td><td>Missed</td></tr></tbody></table></div>
+  <div class="figrow">
+    <figure><a href="assets/final_sweep_size.png" target="_blank" rel="noopener"><img src="assets/final_sweep_size.png" alt="Size sweep: all volumes of a normal heart scaled from 0.6 to 1.6."></a><figcaption>Size sweep: all volumes of a normal heart scaled from 0.6 to 1.6.</figcaption></figure>
+    <figure><a href="assets/final_sweep_EF.png" target="_blank" rel="noopener"><img src="assets/final_sweep_EF.png" alt="EF sweep: ejection fraction changed from 20% to 70%."></a><figcaption>EF sweep: ejection fraction changed from 20% to 70%.</figcaption></figure>
+  </div>
+  <h3>Generated output: features to masks</h3>
+  <p>Masks generated from clinical features for patients the model never saw. Colours: blue right ventricle, olive myocardium, red left ventricle.</p>
+  <figure><a href="assets/final_validation_patients.png" target="_blank" rel="noopener"><img src="assets/final_validation_patients.png" alt="Unseen validation patients: real mask next to the generated masks for the same features (final mask generator)."></a><figcaption>Unseen validation patients: real mask next to the generated masks for the same features (final mask generator).</figcaption></figure>
+  <figure><a href="assets/final_group_prototypes.png" target="_blank" rel="noopener"><img src="assets/final_group_prototypes.png" alt="The typical mask of each diagnosis group, made from the group mean features, at several slice positions from base to apex."></a><figcaption>The typical mask of each diagnosis group, made from the group mean features, at several slice positions from base to apex.</figcaption></figure>
+  <h3>Generated output: masks to synthetic CMR images</h3>
+  <p>One unseen validation patient per diagnosis group. From top to bottom: the real image, the real mask, the image the model makes from the real mask, the mask generated from the 26 clinical features and noise (final generator, with the anatomy filter), and the image made from that generated mask.</p>
+  <figure><a href="assets/final_gallery.png" target="_blank" rel="noopener"><img src="assets/final_gallery.png" alt="Middle slice at end-diastole (ED) and end-systole (ES). Green frame: real data. Red frame: made by a model."></a><figcaption>Middle slice at end-diastole (ED) and end-systole (ES). Green frame: real data. Red frame: made by a model.</figcaption></figure>
+  <p>The generated masks have the size and shape expected for each group (large LV in DCM, small heart in HCM), and the image model turns them into plausible cardiac scans. The generated masks are not copies of the real ones: the RV is often larger than the real RV, and the very small HCM heart at ES is generated with a larger LV cavity than the real one.</p>
+  <details class="fold"><summary><span class="ft">More examples</span><span class="fs">second patient, apex slice, base to apex, same profile with different noise</span></summary><div class="fbody">
+  <figure><a href="assets/final_f2m2i_ED.png" target="_blank" rel="noopener"><img src="assets/final_f2m2i_ED.png" alt="Larger view, middle slice, ED."></a><figcaption>Larger view, middle slice, ED.</figcaption></figure>
+  <figure><a href="assets/final_f2m2i_ES.png" target="_blank" rel="noopener"><img src="assets/final_f2m2i_ES.png" alt="Larger view, middle slice, ES."></a><figcaption>Larger view, middle slice, ES.</figcaption></figure>
+  <figure><a href="assets/final_f2m2i_ED_patient2.png" target="_blank" rel="noopener"><img src="assets/final_f2m2i_ED_patient2.png" alt="A second unseen patient per group, middle slice, ED."></a><figcaption>A second unseen patient per group, middle slice, ED.</figcaption></figure>
+  <figure><a href="assets/final_f2m2i_ED_apex.png" target="_blank" rel="noopener"><img src="assets/final_f2m2i_ED_apex.png" alt="The first patients, a slice near the apex, ED."></a><figcaption>The first patients, a slice near the apex, ED.</figcaption></figure>
+  <figure><a href="assets/final_f2m2i_series.png" target="_blank" rel="noopener"><img src="assets/final_f2m2i_series.png" alt="Generated mask and image from base to apex, ED, one patient per group. All synthetic."></a><figcaption>Generated mask and image from base to apex, ED, one patient per group. All synthetic.</figcaption></figure>
+  <figure><a href="assets/twostep_same_profile.png" target="_blank" rel="noopener"><img src="assets/twostep_same_profile.png" alt="Same DCM profile, five noise seeds (from the first two-step run, before the filter and the 26 features): the profile fixes the type of heart, the noise changes its shape and the image."></a><figcaption>Same DCM profile, five noise seeds (from the first two-step run, before the filter and the 26 features): the profile fixes the type of heart, the noise changes its shape and the image.</figcaption></figure>
+  </div></details>
+    <details class="fold" id="mask-eval"><summary><span class="ft">Features to masks: full numeric and visual evaluation (11 Nov)</span><span class="fs">every feature, every diagnosis group, more figures</span></summary><div class="fbody">
+  <p style="margin-top:14px">The final mask generator (flow matching, 26 features, foreground weight 1) was evaluated on the 15 unseen validation patients: 2 training seeds &times; 3 noise seeds, raw masks and masks after the filter. Each generated mask is measured with the same code that calculated the features, then compared with the value it was asked for.</p>
+  <h4>Summary over the 6 runs</h4>
+  <div class="tablewrap"><table><thead><tr><th>Measure</th><th>Result</th></tr></thead><tbody><tr><td>Anatomy checks passed, first draw (real masks 93%)</td><td>68% (range 63 to 75%)</td></tr><tr><td>Anatomy checks passed after the filter</td><td>99.9%</td></tr><tr><td>Slice-area correlation, RV / MYO / LV</td><td>0.82 / 0.87 / 0.90</td></tr><tr><td>Slice-area spread, generated SD / real SD</td><td>0.87</td></tr><tr><td>Mean correlation over the 24 mask-derived features</td><td>0.79</td></tr><tr><td>Patients within 10% of the requested value</td><td>45%</td></tr><tr><td>LV EF: correlation, mean error, bias</td><td>0.92, 7.6 points, -0.2</td></tr><tr><td>RV EF correlation</td><td>0.55</td></tr><tr><td>Diagnosis read back from the masks (real features 93%)</td><td>89% (range 80 to 100%)</td></tr></tbody></table></div>
+  <h4>Each feature: requested against measured</h4>
+  <p>r is the correlation across patients (1 = perfect). Slope is the calibration slope (1 = ideal, below 1 = pulled towards the average). Mean error is in the unit of the feature. Within 10% is the share of patients whose measured value is within 10% of the request. Shuffle compares the correlation with the features the mask was <em>given</em> (fed) against the patient's <em>own</em> original features, a good model has a high fed value and a low own value.</p>
+  <div class="tablewrap"><table><thead><tr><th>Feature</th><th>r</th><th>Slope</th><th>Mean error</th><th>Within 10%</th><th>Shuffle: fed / own r</th></tr></thead><tbody><tr><td>LV volume, ED (mL)</td><td>0.98</td><td>1.04</td><td>12.6</td><td>61%</td><td>0.77 / -0.13</td></tr><tr><td>LV volume, ES (mL)</td><td>0.99</td><td>0.95</td><td>9.1</td><td>47%</td><td>0.92 / -0.35</td></tr><tr><td>RV volume, ED (mL)</td><td>0.89</td><td>0.95</td><td>18.5</td><td>39%</td><td>0.75 / 0.51</td></tr><tr><td>RV volume, ES (mL)</td><td>0.85</td><td>0.70</td><td>18.8</td><td>22%</td><td>0.80 / -0.19</td></tr><tr><td>Myocardium volume, ED (mL)</td><td>0.98</td><td>0.91</td><td>8.3</td><td>64%</td><td>0.74 / 0.12</td></tr><tr><td>Myocardium volume, ES (mL)</td><td>0.98</td><td>1.00</td><td>11.9</td><td>64%</td><td>0.75 / 0.19</td></tr><tr><td>LV ejection fraction (points)</td><td>0.92</td><td>0.71</td><td>7.6</td><td>39%</td><td>0.84 / -0.34</td></tr><tr><td>RV ejection fraction (points)</td><td>0.55</td><td>0.35</td><td>16.0</td><td>17%</td><td>0.62 / -0.48</td></tr><tr><td>RV/LV ratio, ED</td><td>0.94</td><td>0.80</td><td>0.17</td><td>40%</td><td>0.88 / -0.06</td></tr><tr><td>RV/LV ratio, ES</td><td>0.94</td><td>0.58</td><td>0.45</td><td>28%</td><td>0.87 / -0.20</td></tr><tr><td>Myocardium/LV ratio, ED</td><td>0.88</td><td>0.98</td><td>0.10</td><td>51%</td><td>0.84 / -0.16</td></tr><tr><td>Myocardium/LV ratio, ES</td><td>0.94</td><td>1.05</td><td>0.37</td><td>34%</td><td>0.91 / -0.33</td></tr><tr><td>Wall thickness mean, ED (mm)</td><td>0.93</td><td>0.84</td><td>0.55</td><td>78%</td><td>0.91 / -0.34</td></tr><tr><td>Wall thickness mean, ES (mm)</td><td>0.95</td><td>0.96</td><td>0.77</td><td>82%</td><td>0.92 / -0.37</td></tr><tr><td>Wall thickness spread, ED (mm)</td><td>0.68</td><td>0.59</td><td>0.40</td><td>30%</td><td>0.74 / -0.26</td></tr><tr><td>Wall thickness spread, ES (mm)</td><td>0.73</td><td>0.57</td><td>0.58</td><td>28%</td><td>0.86 / -0.28</td></tr><tr><td>Wall thickness maximum, ED (mm)</td><td>0.79</td><td>0.88</td><td>1.92</td><td>38%</td><td>0.80 / -0.35</td></tr><tr><td>Wall thickness maximum, ES (mm)</td><td>0.76</td><td>0.47</td><td>3.71</td><td>27%</td><td>0.88 / -0.33</td></tr><tr><td>Septal thickness, ED (mm)</td><td>0.73</td><td>0.48</td><td>0.81</td><td>56%</td><td>0.74 / -0.19</td></tr><tr><td>Septal thickness, ES (mm)</td><td>0.48</td><td>0.35</td><td>1.19</td><td>42%</td><td>0.22 / -0.03</td></tr><tr><td>LV circularity, ED</td><td>0.32</td><td>0.22</td><td>0.08</td><td>62%</td><td>0.37 / -0.10</td></tr><tr><td>LV circularity, ES</td><td>0.57</td><td>0.46</td><td>0.09</td><td>64%</td><td>0.67 / -0.42</td></tr><tr><td>RV circularity, ED</td><td>0.61</td><td>0.54</td><td>0.08</td><td>37%</td><td>0.70 / -0.03</td></tr><tr><td>RV circularity, ES</td><td>0.63</td><td>0.45</td><td>0.07</td><td>41%</td><td>0.69 / 0.13</td></tr></tbody></table></div>
+  <h4>Each diagnosis group: requested mean &rarr; generated mean</h4>
+  <div class="tablewrap"><table><thead><tr><th>Group</th><th>LV volume ED (mL)</th><th>LV EF (%)</th><th>RV volume ED (mL)</th><th>RV EF (%)</th><th>Myocardium ED (mL)</th><th>Wall thickness ED (mm)</th></tr></thead><tbody><tr><td><b>NOR</b></td><td>107 &rarr; 100</td><td>63 &rarr; 51</td><td>132 &rarr; 127</td><td>66 &rarr; 53</td><td>77 &rarr; 84</td><td>7.0 &rarr; 7.5</td></tr><tr><td><b>DCM</b></td><td>262 &rarr; 281</td><td>20 &rarr; 22</td><td>149 &rarr; 172</td><td>30 &rarr; 25</td><td>168 &rarr; 172</td><td>8.5 &rarr; 8.2</td></tr><tr><td><b>HCM</b></td><td>121 &rarr; 114</td><td>65 &rarr; 57</td><td>128 &rarr; 122</td><td>57 &rarr; 45</td><td>145 &rarr; 143</td><td>10.3 &rarr; 10.0</td></tr><tr><td><b>MINF</b></td><td>164 &rarr; 175</td><td>21 &rarr; 35</td><td>94 &rarr; 74</td><td>65 &rarr; 23</td><td>112 &rarr; 109</td><td>8.1 &rarr; 7.5</td></tr><tr><td><b>RV</b></td><td>95 &rarr; 95</td><td>57 &rarr; 50</td><td>158 &rarr; 152</td><td>16 &rarr; 33</td><td>66 &rarr; 68</td><td>7.0 &rarr; 6.9</td></tr></tbody></table></div>
+  <p style="margin-top:12px"><strong>Reading.</strong> LV and myocardium volumes, the RV/LV and myocardium/LV ratios and mean wall thickness are followed well (r 0.88 to 0.99), RV volumes a little less (r 0.85 to 0.89, RV at ES slope 0.70). Ejection fractions and the end-systolic RV/LV ratio are compressed (slopes 0.35 to 0.71): the group means show DCM and HCM EF pulled towards the middle, and MINF (requested 21%) generated at 35%. Wall-thickness spread, septal thickness at ES and circularity are only loosely followed (r 0.3 to 0.7). Shuffle control: every feature follows the fed value more than the own value, but septal ES (0.22) and LV circularity at ED (0.37) only weakly.</p>
+  <figure><a href="assets/final_series.png" target="_blank" rel="noopener"><img src="assets/final_series.png" alt="One validation patient from base to apex: real masks next to generated masks for the same features."></a><figcaption>One validation patient from base to apex: real masks next to generated masks for the same features.</figcaption></figure>
+  <div class="figrow">
+    <figure><a href="assets/final_sweep_MYO.png" target="_blank" rel="noopener"><img src="assets/final_sweep_MYO.png" alt="Myocardium sweep: myocardium volume changed on its own."></a><figcaption>Myocardium sweep: myocardium volume changed on its own.</figcaption></figure>
+    <figure><a href="assets/final_sweep_RV.png" target="_blank" rel="noopener"><img src="assets/final_sweep_RV.png" alt="RV sweep: right-ventricle volume changed on its own."></a><figcaption>RV sweep: right-ventricle volume changed on its own.</figcaption></figure>
+  </div>
+  <div class="figrow">
+    <figure><a href="assets/final_variety.png" target="_blank" rel="noopener"><img src="assets/final_variety.png" alt="Variety: five noise draws for the same features."></a><figcaption>Variety: five noise draws for the same features.</figcaption></figure>
+    <figure><a href="assets/final_area_distributions.png" target="_blank" rel="noopener"><img src="assets/final_area_distributions.png" alt="Slice-area distributions: generated against real."></a><figcaption>Slice-area distributions: generated against real.</figcaption></figure>
+  </div>
+  <figure><a href="assets/final_rejected_masks.png" target="_blank" rel="noopener"><img src="assets/final_rejected_masks.png" alt="First draws that failed the anatomy checks; the filter redraws these."></a><figcaption>First draws that failed the anatomy checks. The filter redraws these.</figcaption></figure>
+  <figure><a href="assets/final_requested_vs_measured.png" target="_blank" rel="noopener"><img src="assets/final_requested_vs_measured.png" alt="Requested against measured feature values for the generated masks. Points on the diagonal would be perfect."></a><figcaption>Requested against measured feature values for the generated masks. Points on the diagonal would be perfect.</figcaption></figure>
+  </div></details>
+  <div class="note"><strong>Limits.</strong> 15 validation patients, 2 training seeds, and the model choice was made on the same patients. Usefulness for training and privacy (membership inference) are not tested yet.</div>
+</section>
+<section id="progress">
+  <div class="secno">09</div><h2>Progress</h2>
+<div class="tablewrap"><table><thead><tr><th>Status</th><th>Step</th></tr></thead><tbody><tr><td><span class="status-done" style="font-weight:650">Done</span></td><td><b>Datasets audited and preprocessed</b><br>ACDC and M&amp;Ms, September to October.</td></tr><tr><td><span class="status-done" style="font-weight:650">Done</span></td><td><b>Baseline: mask to image</b><br>SPADE GAN trained and evaluated.</td></tr><tr><td><span class="status-done" style="font-weight:650">Done</span></td><td><b>Two-stage pipeline</b><br>Features to mask to image, run end to end (15 to 29 October).</td></tr><tr><td><span class="status-done" style="font-weight:650">Done</span></td><td><b>Flow matching image model</b><br>FID from 189.5 to 118.8 (29 October).</td></tr><tr><td><span class="status-done" style="font-weight:650">Done</span></td><td><b>Baseline without the profile, memorisation check</b><br>The profile helps. No exact copies found (2 November).</td></tr><tr><td><span class="status-done" style="font-weight:650">Done</span></td><td><b>26 features and flow mask generator</b><br>Size bias fixed, features tested by removal, anatomy filter (3 to 11 November).</td></tr><tr><td><span class="status-done" style="font-weight:650">Done</span></td><td><b>Numeric and visual evaluation of features to masks</b><br>24 features checked one by one, shuffle control, sweeps, diagnosis groups and figures (11 November, see Results).</td></tr><tr><td><span class="status-now" style="font-weight:650">Now</span></td><td><b>Whole pipeline test with the final mask generator</b><br>Then write up the feature changes.</td></tr><tr><td><span class="status-next" style="font-weight:650">Next</span></td><td><b>Usefulness and privacy tests</b><br>Segmentation on real, synthetic and combined data. Membership inference.</td></tr><tr><td><span class="status-next" style="font-weight:650">Next</span></td><td><b>Test sets</b><br>ACDC test set and M&amp;Ms, only after the design is frozen.</td></tr><tr><td><span class="status-next" style="font-weight:650">Next</span></td><td><b>Paper and thesis</b><br>Conference paper target around 1 December, thesis defence June 2027.</td></tr></tbody></table></div>
+  <p style="margin-top:14px">The dated project log with every run is in the <a href="details.html#progress">full details</a>.</p>
+</section>
+<section id="team">
+  <div class="secno">10</div><h2>Team</h2>
+  <div class="people">
+    <div class="person"><div class="avatar">RG</div><b>Riya Guha Roy</b><span>Student, MSc Computer Science (Data Science), University of South-Eastern Norway</span></div>
+    <div class="person"><div class="avatar">VN</div><b>Vimala Nunavath</b><span>Main supervisor, University of South-Eastern Norway</span></div>
+    <div class="person"><div class="avatar">VT</div><b>Vajira Thambawita</b><span>Supervisor, Simula Research Laboratory</span></div>
+    <div class="person"><div class="avatar">MM</div><b>Molly Maleckar</b><span>Supervisor, Simula Research Laboratory</span></div>
+  </div>
+</section>
+<section id="glossary">
+  <div class="secno">11</div><h2>Glossary terms</h2>
+  <h3>Heart and data</h3>
+  <div class="tablewrap"><table><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody><tr><td>CMR</td><td>Cardiac magnetic resonance: a scan that films the beating heart without radiation.</td></tr><tr><td>LV, RV, myocardium</td><td>Left and right ventricle (the two pumping chambers) and the muscle ring around the LV.</td></tr><tr><td>ED, ES</td><td>End-diastole (heart full) and end-systole (heart squeezed). Both phases are used.</td></tr><tr><td>EF</td><td>Ejection fraction: 100 &times; (ED volume &minus; ES volume) &divide; ED volume, the share of blood pumped out per beat.</td></tr><tr><td>Segmentation mask</td><td>A label image: every pixel is background, RV, myocardium or LV.</td></tr><tr><td>NOR, DCM, HCM, MINF, RV</td><td>The five ACDC groups: normal, dilated cardiomyopathy, hypertrophic cardiomyopathy, previous heart attack, abnormal right ventricle.</td></tr><tr><td>Clinical profile</td><td>The patient information used as the condition: here the 26 features.</td></tr></tbody></table></div>
+  <h3>Methods and evaluation</h3>
+  <div class="tablewrap"><table><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody><tr><td>Conditioning</td><td>Giving a model extra information (the profile or a mask) so the output follows it.</td></tr><tr><td>VAE</td><td>A model that compresses and rebuilds data through a small random code. First stage 1 model.</td></tr><tr><td>GAN, SPADE</td><td>A generator trained against a discriminator. SPADE feeds the mask into every generator block so the image keeps its shape.</td></tr><tr><td>Flow matching</td><td>Turns noise into data in many small steps along a learned direction (50 steps here).</td></tr><tr><td>Classifier-free guidance</td><td>Train with the condition sometimes dropped, then push the output towards the condition when generating.</td></tr><tr><td>FiLM</td><td>A layer that scales and shifts features using the condition.</td></tr><tr><td>FID, KID</td><td>Distances between real and synthetic image sets, from Inception features. Lower is better. The real-vs-real floor (FID 99.0) is always shown for reference.</td></tr><tr><td>Anatomy checks, filter</td><td>Rules a mask must pass (one region per class, LV present, myocardium wraps the LV, RV touches the heart). The filter redraws a failing mask.</td></tr><tr><td>Shuffle control</td><td>Feed one patient the features of another and see which one the mask follows.</td></tr><tr><td>Round trip</td><td>Measure the features of a generated mask and compare them with the requested ones.</td></tr></tbody></table></div>
+  <p style="margin-top:12px">Longer glossary with references: <a href="details.html#glossary">full details</a>.</p>
+</section>
+<section id="links">
+  <div class="secno">12</div><h2>Links</h2>
+  <div class="linkcards">
+    <a href="https://github.com/riyaguharoy/personalized-synthetic-cmri-img-dl"><b>GitHub repository</b><span>Code, notes and this website</span></a>
+    <a href="details.html"><b>Full technical details</b><span>All tables, runs, glossary with references, project log</span></a>
+    <a href="https://github.com/riyaguharoy/personalized-synthetic-cmri-img-dl/blob/main/literature/literature_review.md"><b>Literature review</b><span>Sources and reasoning</span></a>
+    <a href="https://github.com/riyaguharoy/personalized-synthetic-cmri-img-dl/blob/main/datasets/dataset_summary.md"><b>Dataset summary</b><span>ACDC and M&amp;Ms notes</span></a>
+  </div>
+</section>
+</main>
+<footer><div class="wrap">Master's thesis project, University of South-Eastern Norway, with Simula Research Laboratory, Norway. Datasets: ACDC (Bernard et al., 2018) and M&amp;Ms (Campello et al., 2021), not redistributed. Work in progress, 2026.</div></footer>
+<script>
+(function () {
+  var links = document.querySelectorAll('nav a[href^="#"]'), secs = [];
+  links.forEach(function (a) { var s = document.querySelector(a.getAttribute('href')); if (s) secs.push([a, s]); });
+  function onScroll() { var y = window.scrollY + 120, cur = null;
+    secs.forEach(function (p) { if (p[1].offsetTop <= y) cur = p[0]; });
+    links.forEach(function (a) { a.classList.toggle('active', a === cur); }); }
+  window.addEventListener('scroll', onScroll); onScroll();
+})();
+(function(){function o(){var e=document.getElementById(location.hash.slice(1));while(e){if(e.tagName==='DETAILS')e.open=true;e=e.parentElement;}}window.addEventListener('hashchange',o);o();})();
+</script>
+</body>
+</html>
