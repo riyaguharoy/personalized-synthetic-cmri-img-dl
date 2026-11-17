@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Clinical features explained: synthetic cardiac MRI">
+<meta property="og:description" content="Master's thesis project: synthetic cardiac MR images and masks generated from a patient's clinical profile. Work in progress.">
+<meta property="og:url" content="https://riyaguharoy.github.io/personalized-synthetic-cmri-img-dl/features.html">
+<meta property="og:image" content="https://riyaguharoy.github.io/personalized-synthetic-cmri-img-dl/assets/social_preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://riyaguharoy.github.io/personalized-synthetic-cmri-img-dl/assets/social_preview.png">
+<title>Clinical Features Explained</title>
+<style>
+/* Layout: narrow header, filter chips by group, one expandable table. Same dark tokens as the project page. */
+:root{--bg:#0a1119;--fg:#e8eef3;--muted:#9db0bf;--line:#27384a;--panel:#0f1923;--accent:#4fd1c0;--accent-soft:#12302f;--heart:#ff6b81;--mono:ui-monospace,Menlo,Consolas,monospace;--sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 var(--sans);padding-block:28px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:var(--accent);text-underline-offset:3px}
+.wrap{max-width:1080px;margin:0 auto}
+.back{font:12px var(--mono);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--accent);display:inline-block}
+h1{font-size:clamp(1.5rem,3.6vw,2.1rem);margin:16px 0 6px;letter-spacing:-.02em}
+.lead{color:var(--muted);max-width:70ch;margin:0 0 18px}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+input[type=search]{flex:1 1 240px;min-width:0;font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+input[type=search]:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--heart);outline-offset:2px}
+.btn{font:inherit;font-size:.88rem;cursor:pointer;color:var(--accent);background:transparent;border:1px solid var(--accent);border-radius:10px;padding:8px 14px}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 22px;margin:6px 0 16px}
+.grp b{display:block;font:11.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:inherit;font-size:.82rem;cursor:pointer;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 11px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#06201d;font-weight:600}
+.count{font:12.5px var(--mono);color:var(--muted);margin:2px 0 8px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:820px;font-size:.88rem}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 11.5px var(--sans);color:var(--muted);white-space:nowrap}
+tr.p{cursor:pointer}tr.p:hover td{background:rgba(79,209,192,.06)}
+tr.p.me td{background:var(--accent-soft)}
+tr.d td{background:rgba(255,255,255,.03);padding:12px 16px}
+.dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:.88rem}
+.dl dt{color:var(--muted)}.dl dd{margin:0}
+.tag{font:11px var(--mono);border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--muted);margin-left:6px;white-space:nowrap}
+.tag.pp{color:var(--accent);border-color:var(--accent)}
+.caret{color:var(--accent);font-family:var(--mono);margin-right:6px}
+.empty{padding:22px;color:var(--muted)}
+.note{font-size:.85rem;color:var(--muted);margin-top:16px;max-width:80ch}
+td button.rowbtn{all:unset;cursor:pointer;color:var(--fg);font-weight:600}
+td button.rowbtn:focus-visible{outline:2px solid var(--heart);outline-offset:2px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:0 0 18px}
+.card{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:12px 14px}
+.card h2{font:600 11.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.hb{display:grid;grid-template-columns:minmax(70px,max-content) 1fr 2ch;gap:3px 8px;align-items:center;font-size:.8rem}
+.hb i{display:block;height:8px;border-radius:4px;background:var(--accent);min-width:2px}
+.hb span:last-child{color:var(--muted);font-family:var(--mono)}
+th.s{cursor:pointer;user-select:none}th.s:hover{color:var(--fg)}th.s[aria-sort]{color:var(--accent)}
+th .ar{font-family:var(--mono);margin-left:4px}
+.na{color:var(--muted);font-style:italic}
+details.sql{margin-top:22px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:10px 14px}
+details.sql summary{cursor:pointer;font-weight:600}
+details.sql textarea{width:100%;min-height:92px;margin:10px 0 8px;font:13px/1.5 var(--mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;resize:vertical}
+details.sql .ex{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.err{color:var(--heart);font:12.5px var(--mono);margin:6px 0;white-space:pre-wrap}
+.res{overflow-x:auto;margin-top:8px}.res table{min-width:0;font-size:.82rem}
+.fail{border:1px solid var(--heart);border-radius:12px;padding:14px 16px;color:var(--fg)}
+
+.callout{border:1px solid var(--accent);border-radius:12px;background:var(--accent-soft);padding:10px 14px;margin:0 0 18px;font-size:.9rem}
+h2{font-size:1.2rem;margin:34px 0 8px;letter-spacing:-.01em}
+.sub{color:var(--muted);max-width:76ch;margin:0 0 12px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:10px 0 6px}
+.fc{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:12px 14px}
+.fc h3{margin:0 0 4px;font-size:.98rem}.fc p{margin:0 0 6px;font-size:.88rem;color:var(--muted)}
+.fc code,code{font:12px var(--mono);color:var(--accent)}
+.gl{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:.9rem;margin:8px 0 0}
+.gl dt{font-family:var(--mono);color:var(--accent)}.gl dd{margin:0;color:var(--muted)}
+.ex{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:760px){.ex{grid-template-columns:1fr}}
+select{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;max-width:100%}
+select:focus-visible{outline:2px solid var(--heart);outline-offset:2px}
+.panel{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:14px}
+.big{font:600 1.05rem var(--sans);margin:0 0 4px}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:3px 12px;font-size:.88rem;margin:8px 0 0}.kv dt{color:var(--muted)}.kv dd{margin:0}
+svg text{fill:var(--muted);font:11px var(--mono)}svg .ax{stroke:var(--line)}svg .bx{fill:var(--accent-soft);stroke:var(--accent)}svg .md{stroke:var(--fg);stroke-width:2}svg .wh{stroke:var(--accent)}svg .mn{fill:var(--heart)}
+.bar2{position:relative;height:8px;background:var(--line);border-radius:4px;min-width:80px}.bar2 i{position:absolute;left:0;top:0;height:8px;border-radius:4px;background:var(--accent)}.bar2 b{position:absolute;top:-3px;width:2px;height:14px;background:var(--fg)}
+td.num{font-family:var(--mono);white-space:nowrap}
+.weak td:first-child{border-left:3px solid var(--heart)}
+figure{margin:12px 0}figure.narrow img{max-width:520px;width:100%}figure img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:#fff}figcaption{font-size:.82rem;color:var(--muted);margin-top:6px;max-width:80ch}
+.fail{border:1px solid var(--heart);border-radius:12px;padding:14px 16px}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">&larr; Back to the project page</a>
+  <h1>Clinical features explained</h1>
+  <p class="lead">The generator in this project is given a clinical profile of 26 numbers. This page explains what each number is, how it is calculated from a cardiac MRI mask, what values it takes in the ACDC data, and how well the generated masks give it back.</p>
+  <div class="callout"><b>Educational material, not medical advice.</b> The ranges below are the values found in the 100 ACDC patients used in this project (20 per diagnosis group). They are not clinical reference ranges. The drawings are simplified.</div>
+
+  <h2 id="what">What a mask is, and what a feature is</h2>
+  <p class="sub">A cardiac MRI slice is a grey image of the heart. A <b>segmentation mask</b> is the same slice with every pixel labelled: background, right ventricle (RV), myocardium (the heart muscle wall) or left ventricle (LV, the main pumping chamber). A <b>feature</b> is a number calculated from the masks of a patient, such as the volume of the LV. Because a feature comes from a mask, it can be calculated again on a generated mask, and compared with the value that was requested.</p>
+  <p class="sub">Two moments of the heartbeat are used. <b>ED</b> is end-diastole, when the heart is most filled. <b>ES</b> is end-systole, when it is most squeezed. The five <b>diagnosis groups</b> of ACDC are NOR (normal), MINF (a past myocardial infarction), DCM (dilated cardiomyopathy: an enlarged, weakly pumping LV), HCM (hypertrophic cardiomyopathy: a thickened wall) and RV (an abnormal right ventricle).</p>
+  <figure class="narrow"><img src="assets/final_validation_patients.png" alt="Rows of real and generated cardiac masks for patients from the five diagnosis groups, at end-diastole and end-systole" loading="lazy"><figcaption>Real and generated masks for unseen validation patients, two per group, middle slice. Blue is the RV, yellow the myocardium, red the LV. &ldquo;Generated&rdquo; and &ldquo;2nd draw&rdquo; are two masks made from the same feature values.</figcaption></figure>
+
+  <h2 id="groups">The features in six families</h2>
+  <div class="cards" id="cards"></div>
+
+  <h2 id="explorer">Explore a feature</h2>
+  <p class="sub">Pick a feature to see how it is calculated and how its values differ between diagnosis groups.</p>
+  <div id="app" hidden>
+    <label for="sel" class="small" style="display:block;margin-bottom:6px">Feature</label>
+    <select id="sel" aria-label="Feature"></select>
+    <div class="ex" style="margin-top:14px">
+      <div class="panel"><p class="big" id="ftitle"></p><p class="sub" id="fdesc" style="margin:0 0 6px"></p>
+        <dl class="kv" id="fkv"></dl></div>
+      <div class="panel"><p class="big" style="font-size:.9rem">Values by diagnosis group</p><div id="plot"></div><p class="small" style="margin:6px 0 0;color:var(--muted)">Box: middle half of the 20 patients. Line: median. Whiskers: lowest and highest. Red dot: mean.</p></div>
+    </div>
+
+    <h2 id="table">All 26 features</h2>
+    <p class="sub">Mean per diagnosis group (20 patients each) and over all 100 patients. Click a row to open it in the explorer above.</p>
+    <div class="tw"><table><thead><tr><th>#</th><th>Feature</th><th>Column</th><th>Unit</th><th>NOR</th><th>MINF</th><th>DCM</th><th>HCM</th><th>RV</th><th>All, mean &plusmn; SD</th></tr></thead><tbody id="trows"></tbody></table></div>
+
+    <h2 id="fidelity">How well the generated masks give each feature back</h2>
+    <p class="sub">For 15 unseen validation patients, the masks generated from their features were measured again. The number is the correlation (r) between requested and measured values: 1 means the generated masks follow the requested values perfectly across patients. The <b>reference</b> mark shows what is left when every structure of the real masks is randomly grown or shrunk by one pixel (1.5 mm): a feature that already loses accuracy there cannot be expected to be reproduced better. Final mask generator, guidance 1, mean of two training seeds. The row bar shows r; the white tick shows the reference.</p>
+    <div class="tw"><table><thead><tr><th>Feature</th><th>r, generated masks</th><th></th><th>Reference r (1-pixel change)</th></tr></thead><tbody id="frows"></tbody></table></div>
+    <p class="note">Rows marked with a red edge have r below 0.7. LV circularity at ED and septal thickness at ES are the weakest, and both are well below their reference value, so the generator can still improve on them. With 15 patients, differences of about 0.02 are within the noise between training seeds. Height and weight are not measured from masks and are not in this table.</p>
+    <figure><img src="assets/final_requested_vs_measured.png" alt="Scatter plots of requested against measured values for each feature on validation patients" loading="lazy"><figcaption>Requested against measured values, one point per validation patient, coloured by group. This figure is from an earlier evaluation run of the same generator, so its correlations differ slightly from the table above.</figcaption></figure>
+
+    <h2 id="why">Why these features</h2>
+    <p class="sub">The first 14 carry the information used to classify the five ACDC diagnoses (Wolterink et al.). The 12 shape features were added because the first masks were too regular. Every feature except height and weight comes from a mask, so the whole profile can be checked on every generated mask. That check is the point of the project: it shows whether the generator really responds to the clinical profile, not only whether the images look realistic.</p>
+    <h2 id="notes">Notes and limits</h2>
+    <ul class="sub">
+      <li>Volumes use 1.5 mm pixels and the slice thickness of each scan. They are volumes of the labelled structure, not heart mass.</li>
+      <li>Thickness is calculated along the centre line of the myocardium as 2 &times; (distance to the nearest edge) &times; 1.5 mm. This definition is still being checked against the lab&rsquo;s formulas, so treat the thickness values as provisional.</li>
+      <li>Circularity is 4&pi; &times; area &divide; perimeter&sup2; of the largest piece of a structure in a slice, averaged over slices. A perfect circle is 1.</li>
+      <li>The groups have 20 patients each, so group means are rough. ACDC is a single-source dataset and the same label can mean a different severity in other datasets.</li>
+    </ul>
+  </div>
+  <div id="fail" class="fail" hidden>The feature data could not be loaded. Open the page from the website, not from a file on disk.</div>
+  <noscript><p class="note">The explorer and tables need JavaScript.</p></noscript>
+  <p class="note"><a href="index.html#features">Back to the feature list on the project page</a> &middot; <a href="literature.html">Paper database</a></p>
+</div>
+<script>
+(function(){
+var FE=[
+['height_cm','Height','Body','cm','Height of the patient, from the patient record. It is not measured from the mask.','Patient record'],
+['weight_kg','Weight','Body','kg','Weight of the patient, from the patient record. It is not measured from the mask.','Patient record'],
+['lv_ed','LV volume, ED','Volume','mL','Blood volume inside the left ventricle when the heart is most filled.','V = N \u00d7 1.5 \u00d7 1.5 \u00d7 \u0394z \u00f7 1000'],
+['rv_ed','RV volume, ED','Volume','mL','Blood volume inside the right ventricle when the heart is most filled.','same as the LV volume, counting RV pixels'],
+['myo_ed','Myocardium volume, ED','Volume','mL','Volume of the heart muscle wall around the left ventricle at end-diastole.','same, counting myocardium pixels'],
+['lv_es','LV volume, ES','Volume','mL','Blood volume inside the left ventricle when the heart is most squeezed.','same, at end-systole'],
+['rv_es','RV volume, ES','Volume','mL','Blood volume inside the right ventricle when the heart is most squeezed.','same, at end-systole'],
+['myo_es','Myocardium volume, ES','Volume','mL','Volume of the muscle wall at end-systole. It looks larger than at ED because the wall thickens as the heart squeezes.','same, at end-systole'],
+['lv_ef','LV ejection fraction','Ejection fraction','%','Share of the LV blood pumped out in one beat. Low values mean a weak pump, as in the DCM group.','EF = 100 \u00d7 (EDV \u2212 ESV) \u00f7 EDV'],
+['rv_ef','RV ejection fraction','Ejection fraction','%','The same share for the right ventricle.','EF = 100 \u00d7 (EDV \u2212 ESV) \u00f7 EDV'],
+['rv_lv_ed','RV / LV volume, ED','Ratio','','RV volume divided by LV volume at end-diastole. High values mean a large right ventricle, as in the RV group.','RV volume \u00f7 LV volume'],
+['rv_lv_es','RV / LV volume, ES','Ratio','','The same ratio at end-systole.','RV volume \u00f7 LV volume'],
+['myo_lv_ed','Myocardium / LV volume, ED','Ratio','','Muscle volume relative to the chamber it surrounds. High values mean a thick wall, as in the HCM group.','myocardium volume \u00f7 LV volume'],
+['myo_lv_es','Myocardium / LV volume, ES','Ratio','','The same ratio at end-systole.','myocardium volume \u00f7 LV volume'],
+['thick_mean_ed','Wall thickness, mean, ED','Wall thickness','mm','Average thickness of the heart muscle wall along its centre line at end-diastole.','t = 2 \u00d7 d \u00d7 1.5 mm, d = distance to the nearest edge'],
+['thick_mean_es','Wall thickness, mean, ES','Wall thickness','mm','The same at end-systole.','as above'],
+['thick_std_ed','Wall thickness, SD, ED','Wall thickness','mm','How uneven the wall is: the spread of thickness along the centre line.','standard deviation of t'],
+['thick_std_es','Wall thickness, SD, ES','Wall thickness','mm','The same at end-systole.','standard deviation of t'],
+['thick_max_ed','Wall thickness, maximum, ED','Wall thickness','mm','Thickest point of the wall at end-diastole.','maximum of t'],
+['thick_max_es','Wall thickness, maximum, ES','Wall thickness','mm','Thickest point of the wall at end-systole.','maximum of t'],
+['sept_mean_ed','Septal thickness, ED','Wall thickness','mm','Thickness of the septum, the wall shared with the right ventricle, at end-diastole.','mean of t on centre-line pixels within 4 pixels of the RV'],
+['sept_mean_es','Septal thickness, ES','Wall thickness','mm','The same at end-systole.','as above'],
+['lvc_circ_ed','LV circularity, ED','Shape','','How round the left ventricle is in a slice (1 is a circle), averaged over slices.','C = 4\u03c0 \u00d7 area \u00f7 perimeter\u00b2'],
+['lvc_circ_es','LV circularity, ES','Shape','','The same at end-systole.','C = 4\u03c0 \u00d7 area \u00f7 perimeter\u00b2'],
+['rvc_circ_ed','RV circularity, ED','Shape','','Roundness of the right ventricle. It is lower than the LV because the RV is crescent-shaped.','C = 4\u03c0 \u00d7 area \u00f7 perimeter\u00b2'],
+['rvc_circ_es','RV circularity, ES','Shape','','The same at end-systole.','C = 4\u03c0 \u00d7 area \u00f7 perimeter\u00b2']];
+var FAM=[['Body','Height and weight from the patient record.'],['Volume','Size of the LV cavity, RV cavity and myocardium, at ED and ES.'],['Ejection fraction','How much of each ventricle is emptied per beat.'],['Ratio','Volumes relative to each other: RV to LV and myocardium to LV.'],['Wall thickness','Mean, spread and maximum thickness of the muscle wall, and the septum.'],['Shape','How round the LV and RV are.']];
+var GR=['NOR','MINF','DCM','HCM','RV'],D,byk={};FE.forEach(function(f,i){byk[f[0]]=f;f.i=i});
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fmt(v,u){if(v==null)return '\u2013';var a=Math.abs(v);return a>=100?v.toFixed(0):a>=10?v.toFixed(1):a>=1?v.toFixed(2):v.toFixed(3)}
+function cards(){document.getElementById('cards').innerHTML=FAM.map(function(f){var m=FE.filter(function(x){return x[2]===f[0]});
+  return '<div class="fc"><h3>'+esc(f[0])+' <span class="small" style="color:var(--muted);font-weight:400">('+m.length+')</span></h3><p>'+esc(f[1])+'</p><p><code>'+m.map(function(x){return x[0]}).join('</code> <code>')+'</code></p></div>'}).join('')}
+function plot(k){var d=D.stats[k],u=byk[k][3],W=520,H=250,L=44,R=12,T=10,B=34,all=[];GR.forEach(function(g){all.push(d[g][0],d[g][4])});
+  var lo=Math.min.apply(null,all),hi=Math.max.apply(null,all),pad=(hi-lo)*.06||1;lo-=pad;hi+=pad;var x=function(i){return L+(W-L-R)*(i+.5)/GR.length},y=function(v){return T+(H-T-B)*(1-(v-lo)/(hi-lo))},bw=Math.min(46,(W-L-R)/GR.length*.5);
+  var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Box plot of '+esc(byk[k][1])+' by diagnosis group" style="width:100%;height:auto">';
+  for(var t=0;t<=4;t++){var v=lo+(hi-lo)*t/4,yy=y(v);s+='<line class="ax" x1="'+L+'" x2="'+(W-R)+'" y1="'+yy+'" y2="'+yy+'"/><text x="'+(L-6)+'" y="'+(yy+4)+'" text-anchor="end">'+fmt(v)+'</text>'}
+  GR.forEach(function(g,i){var a=d[g],cx=x(i);s+='<line class="wh" x1="'+cx+'" x2="'+cx+'" y1="'+y(a[0])+'" y2="'+y(a[4])+'"/><line class="wh" x1="'+(cx-8)+'" x2="'+(cx+8)+'" y1="'+y(a[0])+'" y2="'+y(a[0])+'"/><line class="wh" x1="'+(cx-8)+'" x2="'+(cx+8)+'" y1="'+y(a[4])+'" y2="'+y(a[4])+'"/><rect class="bx" x="'+(cx-bw/2)+'" y="'+y(a[3])+'" width="'+bw+'" height="'+Math.max(1,y(a[1])-y(a[3]))+'"/><line class="md" x1="'+(cx-bw/2)+'" x2="'+(cx+bw/2)+'" y1="'+y(a[2])+'" y2="'+y(a[2])+'"/><circle class="mn" cx="'+cx+'" cy="'+y(a[5])+'" r="3.5"/><text x="'+cx+'" y="'+(H-12)+'" text-anchor="middle">'+g+'</text>'});
+  document.getElementById('plot').innerHTML=s+'</svg>'}
+function show(k){var f=byk[k],d=D.stats[k],fi=D.fid[k];document.getElementById('sel').value=k;
+  document.getElementById('ftitle').textContent=f[1]+(f[3]?' ('+f[3]+')':'');document.getElementById('fdesc').textContent=f[4];
+  var kv='<dt>Column</dt><dd><code>'+f[0]+'</code></dd><dt>Family</dt><dd>'+esc(f[2])+'</dd><dt>How it is calculated</dt><dd>'+esc(f[5])+'</dd><dt>All 100 patients</dt><dd>'+fmt(d.all[0])+' &plusmn; '+fmt(d.all[1])+(f[3]?' '+f[3]:'')+'</dd>';
+  GR.forEach(function(g){kv+=''});kv+=fi?'<dt>Given back by the generator</dt><dd>r = '+fi.baseline.toFixed(2)+' (reference '+fi.ceiling.toFixed(2)+')</dd>':'<dt>Given back by the generator</dt><dd>not applicable (not measured from masks)</dd>';
+  document.getElementById('fkv').innerHTML=kv;plot(k)}
+function tables(){var h='';FE.forEach(function(f,i){var d=D.stats[f[0]];h+='<tr class="p" data-k="'+f[0]+'" tabindex="0"><td>'+(i+1)+'</td><td><b>'+esc(f[1])+'</b></td><td><code>'+f[0]+'</code></td><td>'+esc(f[3]||'\u2013')+'</td>'+GR.map(function(g){return '<td class="num">'+fmt(d[g][5])+'</td>'}).join('')+'<td class="num">'+fmt(d.all[0])+' &plusmn; '+fmt(d.all[1])+'</td></tr>'});
+  document.getElementById('trows').innerHTML=h;
+  var r='';FE.forEach(function(f){var fi=D.fid[f[0]];if(!fi)return;r+='<tr class="'+(fi.baseline<.7?'weak':'')+'"><td><b>'+esc(f[1])+'</b></td><td class="num">'+fi.baseline.toFixed(2)+'</td><td style="min-width:120px"><div class="bar2" role="img" aria-label="r '+fi.baseline.toFixed(2)+', reference '+fi.ceiling.toFixed(2)+'"><i style="width:'+Math.max(0,fi.baseline*100)+'%"></i><b style="left:'+Math.max(0,fi.ceiling*100)+'%"></b></div></td><td class="num">'+fi.ceiling.toFixed(2)+'</td></tr>'});
+  document.getElementById('frows').innerHTML=r;
+  document.querySelectorAll('#trows tr.p').forEach(function(tr){var go=function(){show(tr.getAttribute('data-k'));document.getElementById('explorer').scrollIntoView({behavior:'smooth'})};tr.onclick=go;tr.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();go()}}})}
+function init(){cards();var s=document.getElementById('sel');s.innerHTML=FE.map(function(f){return '<option value="'+f[0]+'">'+esc(f[1])+'</option>'}).join('');s.onchange=function(){show(s.value)};tables();show('lv_ef');document.getElementById('app').hidden=false}
+fetch('assets/features_data.json').then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(j){D=j;init()}).catch(function(e){try{console.error(e)}catch(_){}document.getElementById('fail').hidden=false;cards()});
+})();
+</script>
+</body>
+</html>
