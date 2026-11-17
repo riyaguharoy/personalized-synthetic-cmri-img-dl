@@ -75,12 +75,6 @@ details.sql .ex{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
   <h1>Paper database</h1>
   <p class="lead">Every reference of the literature review: the generation studies with their input features, generator and evaluation metrics, and the datasets, methods and metrics the project builds on. The data sit in a SQLite file (<a href="papers.db">papers.db</a>) that your browser queries directly, so every filter below is a SQL query. Filter by group, search, sort, click a row for details, or write your own query at the bottom.</p>
   <div id="app" hidden>
-    <div class="stats">
-      <div class="card"><h2>Papers per year</h2><div class="hb" id="s-year"></div></div>
-      <div class="card"><h2>By type</h2><div class="hb" id="s-cat"></div></div>
-      <div class="card"><h2>By generator family</h2><div class="hb" id="s-fam"></div></div>
-      <div class="card"><h2>By conditioning</h2><div class="hb" id="s-cond"></div></div>
-    </div>
     <div class="bar"><input type="search" id="q" placeholder="Search papers, features, metrics" aria-label="Search papers"><button class="btn" id="reset" type="button">Reset filters</button><button class="btn" id="csv" type="button">Download CSV</button></div>
     <div class="filters" id="filters"></div>
     <div class="count" id="count" aria-live="polite"></div>
@@ -93,6 +87,12 @@ details.sql .ex{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
       <div class="err" id="err" role="alert"></div><div class="res" id="res"></div>
     </details>
     <p class="note">Rows marked <span class="tag pp">proposal</span> were cited in the thesis proposal. The generation studies were compared one by one; the datasets, original method papers, techniques and metrics are listed with their bibliographic details only, and a dash means the column does not apply. &ldquo;How it was read&rdquo; says how much of each paper was opened. The datasets column is empty until it has been filled in from the papers; an empty cell means not recorded, not none. To add a reference, add it to <code>tools/references.bib</code> and run <code>python tools/import_bib.py</code> then <code>python tools/build_db.py</code>; the curated columns are edited in <code>tools/papers.csv</code>. The review is not exhaustive.</p>
+  <div class="stats">
+      <div class="card"><h2>Papers per year</h2><div class="hb" id="s-year"></div></div>
+      <div class="card"><h2>By type</h2><div class="hb" id="s-cat"></div></div>
+      <div class="card"><h2>By generator family</h2><div class="hb" id="s-fam"></div></div>
+      <div class="card"><h2>By conditioning</h2><div class="hb" id="s-cond"></div></div>
+    </div>
   </div>
   <div id="fail" class="fail" hidden>The database could not be loaded. It needs a browser with WebAssembly and has to be opened from the website, not from a file on disk. You can still <a href="papers.db">download papers.db</a> and open it in any SQLite viewer.</div>
   <noscript><p class="note">This page needs JavaScript to read the SQLite database.</p></noscript>
