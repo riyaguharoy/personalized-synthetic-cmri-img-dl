@@ -29,11 +29,21 @@ CREATE TABLE papers (
   own_work        INTEGER NOT NULL DEFAULT 0,   -- 1 = this project
   url             TEXT,
   takeaway        TEXT,
-  datasets        TEXT                -- datasets used (not recorded yet)
+  datasets        TEXT,               -- datasets used (not recorded yet)
+  bibkey          TEXT UNIQUE,        -- key in references.bib
+  entry_type      TEXT,               -- article or inproceedings
+  authors         TEXT,
+  title           TEXT,
+  venue           TEXT,               -- journal or conference
+  volume          TEXT,
+  pages           TEXT,
+  doi             TEXT,
+  category        TEXT                -- Generation study, Dataset, Evaluation metric, ...
 );
 CREATE INDEX idx_year ON papers(year);
 CREATE INDEX idx_family ON papers(family);
 CREATE INDEX idx_cond ON papers(conditioning);
+CREATE INDEX idx_cat ON papers(category);
 """
 INT = {'year', 'proposal', 'own_work'}
 
