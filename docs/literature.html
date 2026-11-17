@@ -73,10 +73,11 @@ details.sql .ex{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
 <div class="wrap">
   <a class="back" href="index.html">&larr; Back to the project page</a>
   <h1>Paper database</h1>
-  <p class="lead">The papers behind the literature review, with the input features, generator and evaluation metrics of each. The data sit in a SQLite file (<a href="papers.db">papers.db</a>) that your browser queries directly, so every filter below is a SQL query. Filter by group, search, sort, click a row for details, or write your own query at the bottom.</p>
+  <p class="lead">Every reference of the literature review: the generation studies with their input features, generator and evaluation metrics, and the datasets, methods and metrics the project builds on. The data sit in a SQLite file (<a href="papers.db">papers.db</a>) that your browser queries directly, so every filter below is a SQL query. Filter by group, search, sort, click a row for details, or write your own query at the bottom.</p>
   <div id="app" hidden>
     <div class="stats">
       <div class="card"><h2>Papers per year</h2><div class="hb" id="s-year"></div></div>
+      <div class="card"><h2>By type</h2><div class="hb" id="s-cat"></div></div>
       <div class="card"><h2>By generator family</h2><div class="hb" id="s-fam"></div></div>
       <div class="card"><h2>By conditioning</h2><div class="hb" id="s-cond"></div></div>
     </div>
@@ -91,7 +92,7 @@ details.sql .ex{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
       <button class="btn" id="run" type="button">Run query</button>
       <div class="err" id="err" role="alert"></div><div class="res" id="res"></div>
     </details>
-    <p class="note">Rows marked <span class="tag pp">proposal</span> were cited in the thesis proposal. &ldquo;How it was read&rdquo; says how much of each paper was opened. The datasets column is empty until it has been filled in from the papers; an empty cell means not recorded, not none. To add or correct a paper, edit <code>tools/papers.csv</code> and run <code>python tools/build_db.py</code>. The review is not exhaustive.</p>
+    <p class="note">Rows marked <span class="tag pp">proposal</span> were cited in the thesis proposal. The generation studies were compared one by one; the datasets, original method papers, techniques and metrics are listed with their bibliographic details only, and a dash means the column does not apply. &ldquo;How it was read&rdquo; says how much of each paper was opened. The datasets column is empty until it has been filled in from the papers; an empty cell means not recorded, not none. To add a reference, add it to <code>tools/references.bib</code> and run <code>python tools/import_bib.py</code> then <code>python tools/build_db.py</code>; the curated columns are edited in <code>tools/papers.csv</code>. The review is not exhaustive.</p>
   </div>
   <div id="fail" class="fail" hidden>The database could not be loaded. It needs a browser with WebAssembly and has to be opened from the website, not from a file on disk. You can still <a href="papers.db">download papers.db</a> and open it in any SQLite viewer.</div>
   <noscript><p class="note">This page needs JavaScript to read the SQLite database.</p></noscript>
@@ -102,7 +103,7 @@ details.sql .ex{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
 var DB;
 function all(sql,p){var st=DB.prepare(sql);if(p)st.bind(p);var o=[];while(st.step())o.push(st.getAsObject());st.free();return o}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-var FIELDS=[['family','Generator family'],['generates_group','Generates'],['conditioning','Conditioning'],['field','Field'],['year','Year'],['read_level','How it was read']];
+var FIELDS=[['category','Type'],['family','Generator family'],['generates_group','Generates'],['conditioning','Conditioning'],['field','Field'],['year','Year'],['read_level','How it was read']];
 var COLS=[['short_name','Paper'],['year','Year'],['generator','Generator'],['input_features','Input features'],['evaluation','Evaluation metrics'],['datasets','Datasets']];
 var sel={},open={},sortCol='year',sortDir='DESC',cur=[];
 FIELDS.forEach(function(f){sel[f[0]]={}});
@@ -112,7 +113,7 @@ function buildFilters(){var F=document.getElementById('filters');
   FIELDS.forEach(function(f){var d=document.createElement('div');d.className='grp';d.innerHTML='<b>'+f[1]+'</b><div class="chips"></div>';var c=d.querySelector('.chips');
     all('SELECT DISTINCT '+f[0]+' AS v FROM papers WHERE '+f[0]+' IS NOT NULL ORDER BY '+f[0]).forEach(function(x){var v=String(x.v),b=document.createElement('button');b.type='button';b.className='chip';b.textContent=v;b.setAttribute('aria-pressed','false');
       b.onclick=function(){var on=!sel[f[0]][v];if(on)sel[f[0]][v]=1;else delete sel[f[0]][v];b.setAttribute('aria-pressed',on);render()};c.appendChild(b)});F.appendChild(d)})}
-var SEARCH=['full_ref','generator','generates','conditioning','input_features','evaluation','family','takeaway','datasets'];
+var SEARCH=['full_ref','title','authors','venue','category','generator','generates','conditioning','input_features','evaluation','family','takeaway','datasets'];
 function query(){var w=[],p=[];
   FIELDS.forEach(function(f){var k=Object.keys(sel[f[0]]);if(k.length){w.push(f[0]+' IN ('+k.map(function(){return '?'}).join(',')+')');k.forEach(function(v){p.push(f[0]==='year'?+v:v)})}});
   var t=document.getElementById('q').value.trim().toLowerCase();
@@ -121,12 +122,14 @@ function query(){var w=[],p=[];
   var sql='SELECT * FROM papers'+(w.length?' WHERE '+w.join(' AND '):'')+' ORDER BY '+sortCol+' '+(sortDir==='ASC'?'ASC':'DESC')+', short_name';
   return {sql:sql,p:p}}
 function na(v){return v?esc(v):'<span class="na">not recorded</span>'}
+function dash(v){return v?esc(v):'<span class="na">\u2013</span>'}
+function isGen(r){return /^Generation study|^This thesis|^Review/.test(r.category||'')}
 function render(){
   var Q=query();cur=all(Q.sql,Q.p);var total=all('SELECT COUNT(*) AS n FROM papers')[0].n,h='';
   document.getElementById('head').innerHTML=COLS.map(function(c){var on=sortCol===c[0];return '<th class="s" tabindex="0" data-c="'+c[0]+'"'+(on?' aria-sort="'+(sortDir==='ASC'?'ascending':'descending')+'"':'')+'>'+c[1]+'<span class="ar">'+(on?(sortDir==='ASC'?'\u25B2':'\u25BC'):'')+'</span></th>'}).join('');
   cur.forEach(function(r){var o=open[r.id];
-    h+='<tr class="p'+(r.own_work?' me':'')+'" data-id="'+r.id+'"><td><button class="rowbtn" type="button" aria-expanded="'+(!!o)+'"><span class="caret">'+(o?'&minus;':'+')+'</span>'+esc(r.short_name)+'</button>'+(r.proposal?'<span class="tag pp">proposal</span>':'')+'</td><td>'+(r.year==null?'':r.year)+'</td><td>'+esc(r.generator)+'</td><td>'+esc(r.input_features)+'</td><td>'+esc(r.evaluation)+'</td><td>'+na(r.datasets)+'</td></tr>';
-    if(o)h+='<tr class="d"><td colspan="6"><dl class="dl"><dt>Full reference</dt><dd>'+esc(r.full_ref)+(r.url?' &middot; <a href="'+esc(r.url)+'" target="_blank" rel="noopener">paper link</a>':'')+'</dd><dt>Generates</dt><dd>'+esc(r.generates)+'</dd><dt>Family</dt><dd>'+esc(r.family)+'</dd><dt>Conditioning</dt><dd>'+esc(r.conditioning)+'</dd><dt>Datasets</dt><dd>'+na(r.datasets)+'</dd><dt>How it was read</dt><dd>'+esc(r.read_level)+'</dd>'+(r.takeaway?'<dt>Takeaway</dt><dd>'+esc(r.takeaway)+'</dd>':'')+'</dl></td></tr>'});
+    h+='<tr class="p'+(r.own_work?' me':'')+'" data-id="'+r.id+'"><td><button class="rowbtn" type="button" aria-expanded="'+(!!o)+'"><span class="caret">'+(o?'&minus;':'+')+'</span>'+esc(r.short_name)+'</button>'+(r.proposal?'<span class="tag pp">proposal</span>':'')+'</td><td>'+(r.year==null?'':r.year)+'</td><td>'+dash(r.generator)+'</td><td>'+dash(r.input_features)+'</td><td>'+dash(r.evaluation)+'</td><td>'+(isGen(r)?na(r.datasets):dash(r.datasets))+'</td></tr>';
+    if(o)h+='<tr class="d"><td colspan="6"><dl class="dl"><dt>Type</dt><dd>'+esc(r.category)+'</dd>'+(r.title?'<dt>Title</dt><dd>'+esc(r.title)+'</dd>':'')+(r.authors?'<dt>Authors</dt><dd>'+esc(r.authors)+'</dd>':'')+(r.venue?'<dt>Published in</dt><dd>'+esc(r.venue)+(r.volume?', vol. '+esc(r.volume):'')+(r.pages?', pp. '+esc(r.pages):'')+(r.year?' ('+r.year+')':'')+'</dd>':'')+'<dt>Link</dt><dd>'+(r.url?'<a href="'+esc(r.url)+'" target="_blank" rel="noopener">'+esc(r.url.replace(/^https?:\/\//,''))+'</a>':'<span class="na">no link recorded</span>')+'</dd>'+(r.bibkey?'<dt>BibTeX key</dt><dd><code>'+esc(r.bibkey)+'</code></dd>':'')+(isGen(r)?'<dt>Generates</dt><dd>'+dash(r.generates)+'</dd><dt>Family</dt><dd>'+dash(r.family)+'</dd><dt>Conditioning</dt><dd>'+dash(r.conditioning)+'</dd><dt>Datasets</dt><dd>'+na(r.datasets)+'</dd><dt>How it was read</dt><dd>'+dash(r.read_level)+'</dd>':'')+(r.takeaway?'<dt>'+(isGen(r)?'Takeaway':'Used here for')+'</dt><dd>'+esc(r.takeaway)+'</dd>':'')+'</dl></td></tr>'});
   document.getElementById('rows').innerHTML=h||'<tr><td colspan="6" class="empty">No paper matches these filters. Reset the filters or change the search.</td></tr>';
   document.getElementById('count').textContent='Showing '+cur.length+' of '+total+' rows';
   document.querySelectorAll('#rows tr.p').forEach(function(tr){tr.onclick=function(e){if(e.target.tagName==='A')return;var i=+tr.getAttribute('data-id');open[i]=!open[i];render()}});
@@ -142,20 +145,21 @@ function runSql(){var err=document.getElementById('err'),res=document.getElement
 function init(SQL,buf){
   DB=new SQL.Database(new Uint8Array(buf));
   bars('s-year','SELECT year AS k, COUNT(*) AS n FROM papers GROUP BY year ORDER BY year');
-  bars('s-fam','SELECT family AS k, COUNT(*) AS n FROM papers GROUP BY family ORDER BY n DESC, family');
-  bars('s-cond','SELECT conditioning AS k, COUNT(*) AS n FROM papers GROUP BY conditioning ORDER BY n DESC, conditioning');
+  bars('s-cat','SELECT category AS k, COUNT(*) AS n FROM papers GROUP BY category ORDER BY n DESC, category');
+  bars('s-fam','SELECT family AS k, COUNT(*) AS n FROM papers WHERE family IS NOT NULL GROUP BY family ORDER BY n DESC, family');
+  bars('s-cond','SELECT conditioning AS k, COUNT(*) AS n FROM papers WHERE conditioning IS NOT NULL GROUP BY conditioning ORDER BY n DESC, conditioning');
   buildFilters();
   document.getElementById('colnames').textContent=all('PRAGMA table_info(papers)').map(function(c){return c.name}).join(', ');
-  var EX=[['Cardiac papers by conditioning',"SELECT conditioning, COUNT(*) AS papers FROM papers WHERE field='Cardiac' GROUP BY conditioning ORDER BY papers DESC"],
+  var EX=[['Papers by type',"SELECT category, COUNT(*) AS papers FROM papers GROUP BY category ORDER BY papers DESC"],['Cardiac studies by conditioning',"SELECT conditioning, COUNT(*) AS papers FROM papers WHERE category='Generation study (cardiac)' GROUP BY conditioning ORDER BY papers DESC"],
           ['Conditioned on measured features',"SELECT full_ref, generator, evaluation FROM papers WHERE conditioning='Measured features'"],
-          ['Papers read in full',"SELECT full_ref, read_level FROM papers WHERE read_level='Read in full'"],
+          ['Datasets',"SELECT full_ref, title FROM papers WHERE category='Dataset'"],
           ['Not cited in the proposal',"SELECT full_ref, year FROM papers WHERE proposal=0 ORDER BY year DESC"]];
   var ex=document.getElementById('ex');EX.forEach(function(e){var b=document.createElement('button');b.type='button';b.className='chip';b.textContent=e[0];b.onclick=function(){document.getElementById('sql').value=e[1];runSql()};ex.appendChild(b)});
   document.getElementById('sql').value=EX[0][1];
   document.getElementById('q').addEventListener('input',render);
   document.getElementById('reset').onclick=function(){FIELDS.forEach(function(f){sel[f[0]]={}});document.getElementById('q').value='';document.querySelectorAll('#filters .chip').forEach(function(b){b.setAttribute('aria-pressed','false')});render()};
   document.getElementById('run').onclick=runSql;
-  document.getElementById('csv').onclick=function(){var cols=[['full_ref','Paper'],['year','Year'],['family','Generator family'],['generator','Generator'],['generates_group','Generates'],['conditioning','Conditioning'],['input_features','Input features'],['evaluation','Evaluation metrics'],['datasets','Datasets'],['field','Field'],['read_level','How it was read'],['url','Link']];
+  document.getElementById('csv').onclick=function(){var cols=[['bibkey','BibTeX key'],['category','Type'],['full_ref','Paper'],['title','Title'],['authors','Authors'],['venue','Published in'],['year','Year'],['family','Generator family'],['generator','Generator'],['generates_group','Generates'],['conditioning','Conditioning'],['input_features','Input features'],['evaluation','Evaluation metrics'],['datasets','Datasets'],['field','Field'],['read_level','How it was read'],['url','Link']];
     var out=[cols.map(function(c){return c[1]}).join(',')];cur.forEach(function(r){out.push(cols.map(function(c){return '"'+String(r[c[0]]==null?'':r[c[0]]).replace(/"/g,'""')+'"'}).join(','))});
     try{var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([out.join('\n')],{type:'text/csv'}));a.download='paper_database.csv';document.body.appendChild(a);a.click();a.remove()}catch(e){}};
   document.getElementById('app').hidden=false;render()}
