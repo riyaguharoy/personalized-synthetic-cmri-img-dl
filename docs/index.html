@@ -274,10 +274,11 @@ footer{position:relative;z-index:2;max-width:880px;margin:0 auto;padding-block:1
     <h3>Usefulness and privacy</h3>
     <div class="tw"><table style="min-width:600px"><thead><tr><th>Test</th><th>Result</th></tr></thead><tbody>
       <tr><td>Segmentation Dice, trained on real / synthetic / real and synthetic data</td><td>0.801 / 0.765 / 0.821</td></tr>
+      <tr><td>Segmentation Dice with only 10% of the real patients, without / with all synthetic data</td><td>0.604 / 0.780</td></tr>
       <tr><td>Membership inference AUC, whole pipeline (0.5 = no signal)</td><td>0.52 to 0.55</td></tr>
       <tr><td>Membership inference AUC, image model given real masks / mask model alone</td><td>0.74 to 0.78 / 0.614</td></tr>
     </tbody></table></div>
-    <p class="small" style="margin:0">The image model on its own recognises training patients when it is given their real masks, while the whole pipeline, which uses generated masks, does not. All numbers are from 15 validation patients and few runs.</p>
+    <p class="small" style="margin:0">The image model on its own recognises training patients when it is given their real masks, while the whole pipeline, which uses generated masks, does not. The synthetic data was made by generators trained on all 85 training patients, so the 10% result does not show what happens when the generators themselves have little data. All numbers are from 15 validation patients and few runs (3 seeds for the segmentation tests).</p>
   </section>
 
   <section id="status">
