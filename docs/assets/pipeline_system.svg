@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 806" width="1100" height="806" font-family="Inter, Helvetica, Arial, sans-serif" role="img" aria-labelledby="pt pd">
+<title id="pt">Features to masks pipeline</title><desc id="pd">Five lanes: data, training, generation of masks from features, read-back of features from the generated masks, and comparison. Each lane shows inputs, process, outputs and storage. Results feed back into the models.</desc>
+<rect width="1100" height="806" fill="#ffffff"/>
+<text x="96" y="44" font-size="20" font-weight="700" fill="#17202a" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">Pipeline</text>
+<text x="286" y="44" font-size="20" font-weight="700" fill="#17202a" text-anchor="middle" >Inputs</text>
+<text x="505" y="44" font-size="20" font-weight="700" fill="#17202a" text-anchor="middle" >Process</text>
+<text x="729" y="44" font-size="20" font-weight="700" fill="#17202a" text-anchor="middle" >Outputs</text>
+<text x="985" y="44" font-size="20" font-weight="700" fill="#17202a" text-anchor="middle" >Storage</text>
+<line x1="96" y1="182" x2="96" y2="240" stroke="#555" stroke-width="2" stroke-dasharray="3 6"/>
+<line x1="96" y1="316" x2="96" y2="374" stroke="#555" stroke-width="2" stroke-dasharray="3 6"/>
+<line x1="96" y1="450" x2="96" y2="508" stroke="#555" stroke-width="2" stroke-dasharray="3 6"/>
+<line x1="96" y1="584" x2="96" y2="642" stroke="#555" stroke-width="2" stroke-dasharray="3 6"/>
+<path d="M30 718 V 92 " fill="none" stroke="#c9ced3" stroke-width="3" stroke-dasharray="7 7"/>
+<polygon points="30,84 24,96 36,96" fill="#c9ced3"/>
+<rect x="176" y="84" width="664" height="112" rx="16" fill="#e6f4ea"/>
+<rect x="34" y="106" width="124" height="34" rx="4" fill="#fff" stroke="#111" stroke-width="2"/>
+<text x="96" y="128" font-size="12" font-weight="700" fill="#111" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">Data</text>
+<text x="96" y="162" font-size="11" font-weight="400" fill="#566573" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">Prepares the</text>
+<text x="96" y="177" font-size="11" font-weight="400" fill="#566573" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">features</text>
+<rect x="196" y="102" width="180" height="76" rx="10" fill="#2f855a"/>
+<text x="286.0" y="126" font-size="13" font-weight="700" fill="#fff" text-anchor="middle" >ACDC raw data</text>
+<text x="286.0" y="146" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >100 patients, cine MRI + masks</text>
+<text x="286.0" y="163" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >height, weight, diagnosis</text>
+<rect x="402" y="102" width="206" height="76" rx="38" fill="#fff" stroke="#2f855a" stroke-width="2.5"/>
+<text x="505.0" y="127" font-size="13" font-weight="700" fill="#2f855a" text-anchor="middle" >Preprocess and measure</text>
+<text x="505.0" y="146" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >128 x 128, 1.5 mm pixels</text>
+<text x="505.0" y="162" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >26 features per patient</text>
+<rect x="634" y="102" width="190" height="76" rx="10" fill="#2f855a"/>
+<text x="729.0" y="126" font-size="13" font-weight="700" fill="#fff" text-anchor="middle" >Masks + 26 features</text>
+<text x="729.0" y="146" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >one row per patient</text>
+<text x="729.0" y="163" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >85 train, 15 validation</text>
+<rect x="890" y="102" width="190" height="76" rx="10" fill="#eaf6ee" stroke="#2f855a" stroke-width="1.5"/>
+<text x="985.0" y="126" font-size="13" font-weight="700" fill="#2f855a" text-anchor="middle" >Processed dataset</text>
+<text x="985.0" y="146" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >acdc_128 folder</text>
+<text x="985.0" y="163" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >features_all.csv</text>
+<line x1="380" y1="140" x2="393" y2="140" stroke="#7b8794" stroke-width="2"/><polygon points="400,140 392,135 392,145" fill="#7b8794"/>
+<line x1="612" y1="140" x2="625" y2="140" stroke="#7b8794" stroke-width="2"/><polygon points="632,140 624,135 624,145" fill="#7b8794"/>
+<line x1="828" y1="140" x2="881" y2="140" stroke="#7b8794" stroke-width="2"/><polygon points="888,140 880,135 880,145" fill="#7b8794"/>
+<rect x="176" y="218" width="664" height="112" rx="16" fill="#e6effb"/>
+<rect x="34" y="240" width="124" height="34" rx="4" fill="#fff" stroke="#111" stroke-width="2"/>
+<text x="96" y="262" font-size="12" font-weight="700" fill="#111" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">Training</text>
+<text x="96" y="296" font-size="11" font-weight="400" fill="#566573" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">Learns features</text>
+<text x="96" y="311" font-size="11" font-weight="400" fill="#566573" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">to mask</text>
+<rect x="196" y="236" width="180" height="76" rx="10" fill="#2b6cb0"/>
+<text x="286.0" y="260" font-size="13" font-weight="700" fill="#fff" text-anchor="middle" >Real masks + features</text>
+<text x="286.0" y="280" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >of the 85 training patients</text>
+<text x="286.0" y="297" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >slice position, ED/ES flag</text>
+<rect x="402" y="236" width="206" height="76" rx="38" fill="#fff" stroke="#2b6cb0" stroke-width="2.5"/>
+<text x="505.0" y="261" font-size="13" font-weight="700" fill="#2b6cb0" text-anchor="middle" >Train mask generator</text>
+<text x="505.0" y="280" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >flow matching, FiLM U-Net</text>
+<text x="505.0" y="296" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >velocity loss, EMA</text>
+<rect x="634" y="236" width="190" height="76" rx="10" fill="#2b6cb0"/>
+<text x="729.0" y="260" font-size="13" font-weight="700" fill="#fff" text-anchor="middle" >Mask generator</text>
+<text x="729.0" y="280" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >6.4 M parameters</text>
+<text x="729.0" y="297" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >2 training seeds</text>
+<rect x="890" y="236" width="190" height="76" rx="10" fill="#eaf1fb" stroke="#2b6cb0" stroke-width="1.5"/>
+<text x="985.0" y="260" font-size="13" font-weight="700" fill="#2b6cb0" text-anchor="middle" >Mask weights</text>
+<text x="985.0" y="280" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >flow_G_seed0.pt</text>
+<text x="985.0" y="297" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >flow_G_seed1.pt</text>
+<line x1="380" y1="274" x2="393" y2="274" stroke="#7b8794" stroke-width="2"/><polygon points="400,274 392,269 392,279" fill="#7b8794"/>
+<line x1="612" y1="274" x2="625" y2="274" stroke="#7b8794" stroke-width="2"/><polygon points="632,274 624,269 624,279" fill="#7b8794"/>
+<line x1="828" y1="274" x2="881" y2="274" stroke="#7b8794" stroke-width="2"/><polygon points="888,274 880,269 880,279" fill="#7b8794"/>
+<rect x="176" y="352" width="664" height="112" rx="16" fill="#efe9fb"/>
+<rect x="34" y="374" width="124" height="34" rx="4" fill="#fff" stroke="#111" stroke-width="2"/>
+<text x="96" y="396" font-size="12" font-weight="700" fill="#111" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">Generation</text>
+<text x="96" y="430" font-size="11" font-weight="400" fill="#566573" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">Makes masks</text>
+<text x="96" y="445" font-size="11" font-weight="400" fill="#566573" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">from features</text>
+<rect x="196" y="370" width="180" height="76" rx="10" fill="#6f4fc0"/>
+<text x="286.0" y="394" font-size="13" font-weight="700" fill="#fff" text-anchor="middle" >Requested features</text>
+<text x="286.0" y="414" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >26 features of a patient</text>
+<text x="286.0" y="431" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >slice position, ED/ES flag</text>
+<rect x="402" y="370" width="206" height="76" rx="38" fill="#fff" stroke="#6f4fc0" stroke-width="2.5"/>
+<text x="505.0" y="395" font-size="13" font-weight="700" fill="#6f4fc0" text-anchor="middle" >Generate masks</text>
+<text x="505.0" y="414" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >50 Euler steps, anatomy filter</text>
+<text x="505.0" y="430" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >optional best-of-K selection</text>
+<rect x="634" y="370" width="190" height="76" rx="10" fill="#6f4fc0"/>
+<text x="729.0" y="394" font-size="13" font-weight="700" fill="#fff" text-anchor="middle" >Generated masks</text>
+<text x="729.0" y="414" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >all slices, ED and ES</text>
+<text x="729.0" y="431" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >one set per patient</text>
+<rect x="890" y="370" width="190" height="76" rx="10" fill="#f1ecfb" stroke="#6f4fc0" stroke-width="1.5"/>
+<text x="985.0" y="394" font-size="13" font-weight="700" fill="#6f4fc0" text-anchor="middle" >Generated masks</text>
+<text x="985.0" y="414" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >validation patients</text>
+<line x1="380" y1="408" x2="393" y2="408" stroke="#7b8794" stroke-width="2"/><polygon points="400,408 392,403 392,413" fill="#7b8794"/>
+<line x1="612" y1="408" x2="625" y2="408" stroke="#7b8794" stroke-width="2"/><polygon points="632,408 624,403 624,413" fill="#7b8794"/>
+<line x1="828" y1="408" x2="881" y2="408" stroke="#7b8794" stroke-width="2"/><polygon points="888,408 880,403 880,413" fill="#7b8794"/>
+<rect x="176" y="486" width="664" height="112" rx="16" fill="#e1f5f1"/>
+<rect x="34" y="508" width="124" height="34" rx="4" fill="#fff" stroke="#111" stroke-width="2"/>
+<text x="96" y="530" font-size="12" font-weight="700" fill="#111" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">Read-back</text>
+<text x="96" y="564" font-size="11" font-weight="400" fill="#566573" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">Gets the features</text>
+<text x="96" y="579" font-size="11" font-weight="400" fill="#566573" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">back</text>
+<rect x="196" y="504" width="180" height="76" rx="10" fill="#1d8f7e"/>
+<text x="286.0" y="528" font-size="13" font-weight="700" fill="#fff" text-anchor="middle" >Generated masks</text>
+<text x="286.0" y="548" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >stacked per patient and phase</text>
+<rect x="402" y="504" width="206" height="76" rx="38" fill="#fff" stroke="#1d8f7e" stroke-width="2.5"/>
+<text x="505.0" y="529" font-size="13" font-weight="700" fill="#1d8f7e" text-anchor="middle" >Measure again</text>
+<text x="505.0" y="548" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >same code as for real masks</text>
+<text x="505.0" y="564" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >volumes, EF, thickness, shape</text>
+<rect x="634" y="504" width="190" height="76" rx="10" fill="#1d8f7e"/>
+<text x="729.0" y="528" font-size="13" font-weight="700" fill="#fff" text-anchor="middle" >Measured features</text>
+<text x="729.0" y="548" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >24 of 26</text>
+<text x="729.0" y="565" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >not height or weight</text>
+<rect x="890" y="504" width="190" height="76" rx="10" fill="#e6f6f3" stroke="#1d8f7e" stroke-width="1.5"/>
+<text x="985.0" y="528" font-size="13" font-weight="700" fill="#1d8f7e" text-anchor="middle" >Measured features</text>
+<text x="985.0" y="548" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >one row per patient</text>
+<line x1="380" y1="542" x2="393" y2="542" stroke="#7b8794" stroke-width="2"/><polygon points="400,542 392,537 392,547" fill="#7b8794"/>
+<line x1="612" y1="542" x2="625" y2="542" stroke="#7b8794" stroke-width="2"/><polygon points="632,542 624,537 624,547" fill="#7b8794"/>
+<line x1="828" y1="542" x2="881" y2="542" stroke="#7b8794" stroke-width="2"/><polygon points="888,542 880,537 880,547" fill="#7b8794"/>
+<rect x="176" y="620" width="664" height="112" rx="16" fill="#fcece0"/>
+<rect x="34" y="642" width="124" height="34" rx="4" fill="#fff" stroke="#111" stroke-width="2"/>
+<text x="96" y="664" font-size="12" font-weight="700" fill="#111" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">Compare</text>
+<text x="96" y="698" font-size="11" font-weight="400" fill="#566573" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">Scores, then</text>
+<text x="96" y="713" font-size="11" font-weight="400" fill="#566573" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">improves</text>
+<rect x="196" y="634" width="180" height="42" rx="10" fill="#c05621"/>
+<text x="286.0" y="660" font-size="12.5" font-weight="700" fill="#fff" text-anchor="middle" >Measured features</text>
+<rect x="196" y="684" width="180" height="42" rx="10" fill="#c05621"/>
+<text x="286.0" y="710" font-size="12.5" font-weight="700" fill="#fff" text-anchor="middle" >Requested features</text>
+<rect x="402" y="638" width="206" height="76" rx="38" fill="#fff" stroke="#c05621" stroke-width="2.5"/>
+<text x="505.0" y="663" font-size="13" font-weight="700" fill="#c05621" text-anchor="middle" >Compare</text>
+<text x="505.0" y="682" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >correlation, within 10%, EF</text>
+<text x="505.0" y="698" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >anatomy pass, copying check</text>
+<rect x="634" y="638" width="190" height="76" rx="10" fill="#c05621"/>
+<text x="729.0" y="662" font-size="13" font-weight="700" fill="#fff" text-anchor="middle" >Fidelity results</text>
+<text x="729.0" y="682" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >mean r 0.80 (one draw)</text>
+<text x="729.0" y="699" font-size="11.5" font-weight="400" fill="#fff" text-anchor="middle" >0.86 (best of 8)</text>
+<rect x="890" y="638" width="190" height="76" rx="10" fill="#fdf0e6" stroke="#c05621" stroke-width="1.5"/>
+<text x="985.0" y="662" font-size="13" font-weight="700" fill="#c05621" text-anchor="middle" >Results and website</text>
+<text x="985.0" y="682" font-size="11.5" font-weight="400" fill="#566573" text-anchor="middle" >CSV files, thesis, site</text>
+<line x1="612" y1="676" x2="625" y2="676" stroke="#7b8794" stroke-width="2"/><polygon points="632,676 624,671 624,681" fill="#7b8794"/>
+<line x1="828" y1="676" x2="881" y2="676" stroke="#7b8794" stroke-width="2"/><polygon points="888,676 880,671 880,681" fill="#7b8794"/>
+<line x1="380" y1="655" x2="394" y2="676" stroke="#7b8794" stroke-width="2"/>
+<line x1="380" y1="705" x2="394" y2="676" stroke="#7b8794" stroke-width="2"/>
+<polygon points="400,676 392,671 392,681" fill="#7b8794"/>
+<circle cx="940" cy="178" r="4" fill="#7b8794"/>
+<polyline points="940,178 940,203 286,203 286,235" fill="none" stroke="#7b8794" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="286,235 281,225 291,225" fill="#7b8794"/>
+<circle cx="1030" cy="178" r="4" fill="#7b8794"/>
+<polyline points="1030,178 1030,211 866,211 866,335 250,335 250,369" fill="none" stroke="#7b8794" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="250,369 245,359 255,359" fill="#7b8794"/>
+<circle cx="940" cy="312" r="4" fill="#7b8794"/>
+<polyline points="940,312 940,343 330,343 330,369" fill="none" stroke="#7b8794" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="330,369 325,359 335,359" fill="#7b8794"/>
+<circle cx="985" cy="446" r="4" fill="#7b8794"/>
+<polyline points="985,446 985,475 286,475 286,503" fill="none" stroke="#7b8794" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="286,503 281,493 291,493" fill="#7b8794"/>
+<circle cx="985" cy="580" r="4" fill="#7b8794"/>
+<polyline points="985,580 985,609 286,609 286,637" fill="none" stroke="#7b8794" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="286,637 281,627 291,627" fill="#7b8794"/>
+<text x="550.0" y="792" font-size="12" font-weight="400" fill="#566573" text-anchor="middle" >Boxes: inputs and outputs. Rounded outlines: processes. Pale boxes: what is stored. Grey lines: what feeds what. Dashed loop: results feed back into the models.</text>
+</svg>
