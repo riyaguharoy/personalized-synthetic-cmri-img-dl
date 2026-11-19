@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 700" width="1100" height="700" font-family="Inter, Helvetica, Arial, sans-serif" role="img" aria-labelledby="qt qd">
+<title id="qt">Thesis pipeline in four steps</title><desc id="qd">Step 1 dataset investigation, step 2 baseline development, step 3 conditioned generation in two stages, step 4 evaluation of fidelity, utility and privacy. Each step builds on the one before.</desc>
+<rect width="1100" height="700" fill="#ffffff"/>
+<text x="550.0" y="40" font-size="17" font-weight="700" fill="#17202a" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">CLINICAL-PROFILE-CONDITIONED GENERATION: PIPELINE AND PROGRESS</text>
+<rect x="40" y="92" width="230" height="80" rx="10" fill="#fdecea" stroke="#c0392b" stroke-width="2"/>
+<text x="155" y="124" font-size="15" font-weight="700" fill="#c0392b" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">STEP 1</text>
+<text x="155" y="150" font-size="14" font-weight="600" fill="#17202a" text-anchor="middle" >Dataset investigation</text>
+<line x1="272" y1="132" x2="338" y2="132" stroke="#444" stroke-width="2"/><polygon points="346,132 336,126 336,138" fill="#444"/>
+<rect x="350" y="72" width="710" height="120" rx="12" fill="#fdecea" stroke="#c0392b" stroke-width="2"/>
+<text x="372" y="102" font-size="16" font-weight="700" fill="#c0392b" text-anchor="start" >Datasets and clinical variables</text>
+<text x="372" y="130" font-size="13.5" font-weight="400" fill="#17202a" text-anchor="start" >ACDC used: 100 patients, 85 train / 15 validation</text>
+<text x="372" y="154" font-size="13.5" font-weight="400" fill="#17202a" text-anchor="start" >26 clinical features per patient, measured from masks</text>
+<text x="372" y="178" font-size="13.5" font-weight="400" fill="#17202a" text-anchor="start" >M&amp;Ms: preprocessing and test code ready, not run yet</text>
+<rect x="949.4" y="82" width="90.60000000000001" height="22" rx="11" fill="#c0392b"/>
+<text x="994.7" y="97" font-size="11.5" font-weight="600" fill="#fff" text-anchor="middle" >ACDC done</text>
+<line x1="155" y1="174" x2="155" y2="240" stroke="#444" stroke-width="2"/><polygon points="155,248 149,238 161,238" fill="#444"/>
+<rect x="40" y="248" width="230" height="80" rx="10" fill="#fdf6d8" stroke="#b7950b" stroke-width="2"/>
+<text x="155" y="280" font-size="15" font-weight="700" fill="#b7950b" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">STEP 2</text>
+<text x="155" y="306" font-size="14" font-weight="600" fill="#17202a" text-anchor="middle" >Baseline development</text>
+<line x1="272" y1="288" x2="338" y2="288" stroke="#444" stroke-width="2"/><polygon points="346,288 336,282 336,294" fill="#444"/>
+<rect x="350" y="228" width="710" height="120" rx="12" fill="#fdf6d8" stroke="#b7950b" stroke-width="2"/>
+<text x="372" y="258" font-size="16" font-weight="700" fill="#b7950b" text-anchor="start" >Baseline: mask to image, no clinical profile</text>
+<text x="372" y="286" font-size="13.5" font-weight="400" fill="#17202a" text-anchor="start" >SPADE GAN: real mask in, image out</text>
+<text x="372" y="310" font-size="13.5" font-weight="400" fill="#17202a" text-anchor="start" >FID 178.0 with real masks, 180.7 to 182.8 with generated masks (150 epochs)</text>
+<text x="372" y="334" font-size="13.5" font-weight="400" fill="#17202a" text-anchor="start" >Rerun with the 26-feature masks done: flow matching 118.5 to 121.0</text>
+<rect x="919.8" y="238" width="120.2" height="22" rx="11" fill="#b7950b"/>
+<text x="979.9" y="253" font-size="11.5" font-weight="600" fill="#fff" text-anchor="middle" >Baseline done</text>
+<line x1="155" y1="330" x2="155" y2="396" stroke="#444" stroke-width="2"/><polygon points="155,404 149,394 161,394" fill="#444"/>
+<rect x="40" y="404" width="230" height="80" rx="10" fill="#e6effb" stroke="#2b6cb0" stroke-width="2"/>
+<text x="155" y="436" font-size="15" font-weight="700" fill="#2b6cb0" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">STEP 3</text>
+<text x="155" y="462" font-size="14" font-weight="600" fill="#17202a" text-anchor="middle" >Conditioned generation</text>
+<line x1="272" y1="444" x2="338" y2="444" stroke="#444" stroke-width="2"/><polygon points="346,444 336,438 336,450" fill="#444"/>
+<rect x="350" y="384" width="710" height="120" rx="12" fill="#e6effb" stroke="#2b6cb0" stroke-width="2"/>
+<text x="372" y="414" font-size="16" font-weight="700" fill="#2b6cb0" text-anchor="start" >Strategy 2: two-stage generation</text>
+<text x="372" y="442" font-size="13.5" font-weight="400" fill="#17202a" text-anchor="start" >Stage 1: 26 features to segmentation mask (flow matching, FiLM U-Net)</text>
+<text x="372" y="466" font-size="13.5" font-weight="400" fill="#17202a" text-anchor="start" >Stage 2: mask to image (flow-matching U-Net)</text>
+<text x="372" y="490" font-size="13.5" font-weight="400" fill="#17202a" text-anchor="start" >Improving stage 1: best-of-K selection, consistency loss</text>
+<rect x="890.2" y="394" width="149.8" height="22" rx="11" fill="#2b6cb0"/>
+<text x="965.1" y="409" font-size="11.5" font-weight="600" fill="#fff" text-anchor="middle" >Both stages built</text>
+<line x1="155" y1="486" x2="155" y2="552" stroke="#444" stroke-width="2"/><polygon points="155,560 149,550 161,550" fill="#444"/>
+<rect x="40" y="560" width="230" height="80" rx="10" fill="#e6f4ea" stroke="#2f855a" stroke-width="2"/>
+<text x="155" y="592" font-size="15" font-weight="700" fill="#2f855a" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace">STEP 4</text>
+<text x="155" y="618" font-size="14" font-weight="600" fill="#17202a" text-anchor="middle" >Evaluation</text>
+<line x1="272" y1="600" x2="338" y2="600" stroke="#444" stroke-width="2"/><polygon points="346,600 336,594 336,606" fill="#444"/>
+<rect x="350" y="540" width="710" height="120" rx="12" fill="#e6f4ea" stroke="#2f855a" stroke-width="2"/>
+<text x="372" y="570" font-size="16" font-weight="700" fill="#2f855a" text-anchor="start" >Fidelity, utility, privacy</text>
+<text x="372" y="598" font-size="13.5" font-weight="400" fill="#17202a" text-anchor="start" >Fidelity: features read back from masks vs requested; FID, KID</text>
+<text x="372" y="622" font-size="13.5" font-weight="400" fill="#17202a" text-anchor="start" >Utility: segmentation trained on real, synthetic, combined</text>
+<text x="372" y="646" font-size="13.5" font-weight="400" fill="#17202a" text-anchor="start" >Privacy: memorisation checked on all 100 patients; membership test done</text>
+<rect x="868.0" y="550" width="172.0" height="22" rx="11" fill="#2f855a"/>
+<text x="954.0" y="565" font-size="11.5" font-weight="600" fill="#fff" text-anchor="middle" >Fidelity in progress</text>
+<text x="550.0" y="686" font-size="12" font-weight="400" fill="#566573" text-anchor="middle" >Follows Figure 3 of the thesis proposal. Status shown is where the work stands now.</text>
+</svg>

@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 812" width="1100" height="812" font-family="Inter, Helvetica, Arial, sans-serif" role="img" aria-labelledby="t d">
+<title id="t">System architecture</title><desc id="d">A clinical profile of 26 features goes to a flow matching mask generator, an anatomy filter and an optional selection step. The mask goes to a flow matching image model, with a SPADE GAN as baseline, and gives a synthetic cardiac MR image. Checks measure the features again on the generated mask.</desc>
+<rect width="1100" height="812" fill="#ffffff"/>
+<text x="550.0" y="34" font-size="20" font-weight="700" fill="#17202a" text-anchor="middle" >System architecture: from a clinical profile to a synthetic cardiac MR image</text>
+<rect x="20" y="52" width="1060" height="250" rx="16" fill="#f1ecfb" stroke="#6f4fc0" stroke-width="1.5"/>
+<text x="38" y="78" font-size="13" font-weight="700" fill="#6f4fc0" text-anchor="start" letter-spacing="1.2">STAGE 1  ·  FEATURES TO MASK</text>
+<rect x="40" y="92" width="190" height="150" rx="12" fill="#e6f0fa" stroke="#2b6cb0" stroke-width="2"/>
+<text x="135.0" y="118" font-size="15" font-weight="700" fill="#17202a" text-anchor="middle" >Clinical profile</text>
+<text x="135.0" y="142" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >26 features</text>
+<text x="135.0" y="161" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >14 classification</text>
+<text x="135.0" y="180" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >+ 12 shape features</text>
+<text x="135.0" y="199" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >slice position, ED/ES</text>
+<text x="135.0" y="218" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >noise</text>
+<line x1="230" y1="167" x2="251" y2="167" stroke="#34495e" stroke-width="2.2"/>
+<polygon points="258,167 248,162 248,172" fill="#34495e"/>
+<rect x="258" y="92" width="212" height="150" rx="12" fill="#e2f5f1" stroke="#1d8f7e" stroke-width="2"/>
+<text x="364.0" y="118" font-size="15" font-weight="700" fill="#17202a" text-anchor="middle" >Mask generator</text>
+<text x="364.0" y="142" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >flow matching</text>
+<text x="364.0" y="161" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >FiLM U-Net, 6.4 M</text>
+<text x="364.0" y="180" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >50 Euler steps</text>
+<text x="364.0" y="199" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >guidance weight 1</text>
+<text x="364.0" y="218" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >LV EF r 0.92</text>
+<line x1="470" y1="167" x2="491" y2="167" stroke="#34495e" stroke-width="2.2"/>
+<polygon points="498,167 488,162 488,172" fill="#34495e"/>
+<rect x="498" y="92" width="172" height="150" rx="12" fill="#e2f5f1" stroke="#1d8f7e" stroke-width="2"/>
+<text x="584.0" y="118" font-size="15" font-weight="700" fill="#17202a" text-anchor="middle" >Anatomy filter</text>
+<text x="584.0" y="142" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >failed mask is</text>
+<text x="584.0" y="161" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >redrawn, up to 20x</text>
+<text x="584.0" y="180" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >68% pass first draw</text>
+<text x="584.0" y="199" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >99.9% after</text>
+<line x1="670" y1="167" x2="691" y2="167" stroke="#34495e" stroke-width="2.2"/>
+<polygon points="698,167 688,162 688,172" fill="#34495e"/>
+<rect x="698" y="92" width="210" height="150" rx="12" fill="#fff4e0" stroke="#d9822b" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="803.0" y="118" font-size="15" font-weight="700" fill="#17202a" text-anchor="middle" >Selection (optional)</text>
+<text x="803.0" y="142" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >draw K sets per patient</text>
+<text x="803.0" y="161" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >keep the set whose</text>
+<text x="803.0" y="180" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >measured features are</text>
+<text x="803.0" y="199" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >closest to the request</text>
+<text x="803.0" y="218" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >mean feature r 0.80 to 0.86</text>
+<line x1="908" y1="167" x2="929" y2="167" stroke="#34495e" stroke-width="2.2"/>
+<polygon points="936,167 926,162 926,172" fill="#34495e"/>
+<rect x="936" y="92" width="124" height="150" rx="12" fill="#f4e9fa" stroke="#8e44ad" stroke-width="2"/>
+<text x="998" y="118" font-size="15" font-weight="700" fill="#17202a" text-anchor="middle" >Mask</text>
+<ellipse cx="1026" cy="168" rx="15" ry="26" fill="#38bcd8"/><circle cx="992" cy="170" r="25" fill="#e0b53a"/><circle cx="992" cy="170" r="14" fill="#ff6b6b"/>
+<text x="998" y="222" font-size="11" font-weight="400" fill="#5b6b7a" text-anchor="middle" >128 x 128, 4 labels</text>
+<text x="40" y="284" font-size="12" font-weight="400" fill="#5b6b7a" text-anchor="start" font-style="italic">Trained on the real masks and real features of 85 training patients. Flow matching velocity loss, foreground weight 3, condition dropped in 10% of steps.</text>
+<rect x="20" y="330" width="1060" height="305" rx="16" fill="#e8f4ec" stroke="#2f855a" stroke-width="1.5"/>
+<text x="1062" y="356" font-size="13" font-weight="700" fill="#2f855a" text-anchor="end" letter-spacing="1.2">STAGE 2  ·  MASK TO IMAGE</text>
+<rect x="40" y="408" width="170" height="90" rx="12" fill="#f4e9fa" stroke="#8e44ad" stroke-width="2"/>
+<text x="125.0" y="434" font-size="15" font-weight="700" fill="#17202a" text-anchor="middle" >Mask</text>
+<text x="125.0" y="458" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >from stage 1</text>
+<text x="125.0" y="477" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >or a real mask</text>
+<rect x="268" y="364" width="330" height="116" rx="12" fill="#e2f5f1" stroke="#1d8f7e" stroke-width="2"/>
+<text x="433.0" y="390" font-size="15" font-weight="700" fill="#17202a" text-anchor="middle" >Image model (final)</text>
+<text x="433.0" y="414" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >flow matching, velocity U-Net, 24.7 M</text>
+<text x="433.0" y="433" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >mask given to every block</text>
+<text x="433.0" y="452" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >guidance 2, 50 steps</text>
+<text x="433.0" y="471" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >FID 118.5 to 121.0, KID 0.04 (generated masks)</text>
+<rect x="268" y="494" width="330" height="116" rx="12" fill="#eef1f4" stroke="#6b7c8c" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="433.0" y="520" font-size="15" font-weight="700" fill="#17202a" text-anchor="middle" >Baseline: SPADE GAN</text>
+<text x="433.0" y="544" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >generator 14.6 M, 128 random numbers</text>
+<text x="433.0" y="563" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >SPADE layers use the mask</text>
+<text x="433.0" y="582" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >discriminator 2.8 M, training only</text>
+<text x="433.0" y="601" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >FID 180.7 to 182.8, KID 0.113 (generated masks)</text>
+<line x1="210" y1="444" x2="259" y2="418" stroke="#34495e" stroke-width="2.2"/>
+<polygon points="266,418 256,413 256,423" fill="#34495e"/>
+<line x1="210" y1="462" x2="259" y2="540" stroke="#34495e" stroke-width="2.2"/>
+<polygon points="266,540 256,535 256,545" fill="#34495e"/>
+<rect x="760" y="408" width="290" height="104" rx="12" fill="#f4e9fa" stroke="#8e44ad" stroke-width="2"/>
+<text x="905" y="434" font-size="15" font-weight="700" fill="#17202a" text-anchor="middle" >Synthetic cardiac MR image</text>
+<text x="905" y="458" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >128 x 128 short-axis slice</text>
+<text x="905" y="478" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >with its mask. Nothing real is</text>
+<text x="905" y="498" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >used at generation time.</text>
+<line x1="598" y1="422" x2="751" y2="452" stroke="#34495e" stroke-width="2.2"/>
+<polygon points="758,452 748,447 748,457" fill="#34495e"/>
+<line x1="598" y1="552" x2="751" y2="482" stroke="#34495e" stroke-width="2.2" stroke-dasharray="6 5"/>
+<polygon points="758,482 748,477 748,487" fill="#34495e"/>
+<text x="40" y="628" font-size="12" font-weight="400" fill="#5b6b7a" text-anchor="start" font-style="italic">Trained on real image and mask pairs of the same 85 patients. The mask is hidden in 10% of steps so guidance can be used.</text>
+<polyline points="998,242 998,318 125,318 125,394" fill="none" stroke="#34495e" stroke-width="2.2"/>
+<polygon points="125,406 119,394 131,394" fill="#34495e"/>
+<rect x="20" y="654" width="1060" height="128" rx="16" fill="#f3f5f7" stroke="#5b6b7a" stroke-width="1.5"/>
+<text x="38" y="680" font-size="13" font-weight="700" fill="#5b6b7a" text-anchor="start" letter-spacing="1.2">CHECKS  ·  15 VALIDATION PATIENTS</text>
+<rect x="40" y="692" width="240" height="70" rx="12" fill="#ffffff" stroke="#5b6b7a" stroke-width="2"/>
+<text x="160.0" y="718" font-size="15" font-weight="700" fill="#17202a" text-anchor="middle" >Measure the features again</text>
+<text x="160.0" y="742" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >same code on each generated mask</text>
+<rect x="300" y="692" width="240" height="70" rx="12" fill="#ffffff" stroke="#5b6b7a" stroke-width="2"/>
+<text x="420.0" y="718" font-size="15" font-weight="700" fill="#17202a" text-anchor="middle" >Requested vs measured</text>
+<text x="420.0" y="742" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >correlation, within 10%, EF</text>
+<rect x="560" y="692" width="240" height="70" rx="12" fill="#ffffff" stroke="#5b6b7a" stroke-width="2"/>
+<text x="680.0" y="718" font-size="15" font-weight="700" fill="#17202a" text-anchor="middle" >Diagnosis read-back</text>
+<text x="680.0" y="742" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >classifier on generated masks</text>
+<rect x="820" y="692" width="240" height="70" rx="12" fill="#ffffff" stroke="#5b6b7a" stroke-width="2"/>
+<text x="940.0" y="718" font-size="15" font-weight="700" fill="#17202a" text-anchor="middle" >Images and use</text>
+<text x="940.0" y="742" font-size="13" font-weight="400" fill="#5b6b7a" text-anchor="middle" >FID, KID, Dice, membership AUC</text>
+<text x="550.0" y="802" font-size="12" font-weight="400" fill="#5b6b7a" text-anchor="middle" >Solid teal: models.  Dashed orange: optional step, no retraining.  Dashed grey: baseline.  Purple: synthetic output.</text>
+</svg>
